@@ -1,0 +1,593 @@
+---
+title: Project Management Actions
+description: Modify Xcode project settings and manage project configuration
+---
+
+## Overview
+
+fastlane provides actions to programmatically modify Xcode project settings, manage teams, and configure build settings without opening Xcode.
+
+## Code Signing Configuration
+
+### update_code_signing_settings
+
+Update code signing settings in your Xcode project.
+
+#### Basic Usage
+
+```ruby
+update_code_signing_settings(
+  use_automatic_signing: false,
+  path: "MyApp.xcodeproj"
+)
+```
+
+#### Parameters
+
+<ParamField path="path" type="string">
+  Path to your Xcode project (.xcodeproj)
+</ParamField>
+
+<ParamField path="use_automatic_signing" type="boolean" default="false">
+  Enable or disable automatic code signing
+</ParamField>
+
+<ParamField path="team_id" type="string">
+  Development team ID
+</ParamField>
+
+<ParamField path="targets" type="array">
+  Specific targets to update (defaults to all targets)
+</ParamField>
+
+<ParamField path="build_configurations" type="array">
+  Specific build configurations to update (defaults to all)
+</ParamField>
+
+<ParamField path="code_sign_identity" type="string">
+  Code signing identity (e.g., "iPhone Developer", "iPhone Distribution")
+</ParamField>
+
+<ParamField path="profile_name" type="string">
+  Provisioning profile name (PROVISIONING_PROFILE_SPECIFIER)
+</ParamField>
+
+<ParamField path="profile_uuid" type="string">
+  Provisioning profile UUID (PROVISIONING_PROFILE)
+</ParamField>
+
+<ParamField path="bundle_identifier" type="string">
+  Bundle identifier to set (PRODUCT_BUNDLE_IDENTIFIER)
+</ParamField>
+
+<ParamField path="entitlements_file_path" type="string">
+  Path to entitlements file (CODE_SIGN_ENTITLEMENTS)
+</ParamField>
+
+<ParamField path="sdk" type="string">
+  SDK to apply settings to (e.g., "iphoneos*", "macosx*")
+</ParamField>
+
+#### Return Value
+
+Returns the current status of code signing (boolean) after modification.
+
+#### Examples
+
+```ruby
+# Enable manual code signing
+update_code_signing_settings(
+  use_automatic_signing: false,
+  path: "MyApp.xcodeproj"
+)
+
+# Enable automatic code signing
+update_code_signing_settings(
+  use_automatic_signing: true,
+  path: "MyApp.xcodeproj"
+)
+
+# Configure manual signing with all options
+update_code_signing_settings(
+  use_automatic_signing: false,
+  path: "MyApp.xcodeproj",
+  team_id: "QABC123DEV",
+  bundle_identifier: "com.example.app",
+  code_sign_identity: "iPhone Distribution",
+  sdk: "iphoneos*",
+  profile_name: "App Store Profile",
+  entitlements_file_path: "MyApp/MyApp.entitlements"
+)
+
+# Update specific targets
+update_code_signing_settings(
+  use_automatic_signing: false,
+  path: "MyApp.xcodeproj",
+  targets: ["MyApp", "MyAppTests"],
+  team_id: "XXXXXXXXXX"
+)
+
+# Update specific build configurations
+update_code_signing_settings(
+  use_automatic_signing: false,
+  path: "MyApp.xcodeproj",
+  build_configurations: ["Release", "Beta"],
+  profile_name: "Release Profile"
+)
+```
+
+#### Supported Platforms
+
+- iOS
+- macOS
+
+---
+
+### automatic_code_signing (Deprecated)
+
+<Warning>
+This action is deprecated. Use `update_code_signing_settings` instead.
+</Warning>
+
+Configure Xcode's automatic code signing.
+
+#### Aliases
+
+- `enable_automatic_code_signing`
+- `disable_automatic_code_signing`
+
+#### Examples
+
+```ruby
+# Enable automatic code signing (deprecated)
+enable_automatic_code_signing(
+  path: "MyApp.xcodeproj"
+)
+
+# Disable automatic code signing (deprecated)
+disable_automatic_code_signing(
+  path: "MyApp.xcodeproj"
+)
+
+# Use update_code_signing_settings instead
+update_code_signing_settings(
+  use_automatic_signing: true,
+  path: "MyApp.xcodeproj"
+)
+```
+
+---
+
+## Team Management
+
+### update_project_team
+
+Update the development team for your Xcode project.
+
+#### Basic Usage
+
+```ruby
+update_project_team(
+  path: "MyApp.xcodeproj",
+  teamid: "XXXXXXXXXX"
+)
+```
+
+#### Parameters
+
+<ParamField path="path" type="string">
+  Path to your Xcode project
+</ParamField>
+
+<ParamField path="teamid" type="string">
+  The Team ID from Apple Developer Portal
+</ParamField>
+
+<ParamField path="targets" type="array">
+  Specific targets to update
+</ParamField>
+
+#### Examples
+
+```ruby
+# Update team for all targets
+update_project_team(
+  path: "MyApp.xcodeproj",
+  teamid: "XXXXXXXXXX"
+)
+
+# Update specific targets
+update_project_team(
+  path: "MyApp.xcodeproj",
+  teamid: "XXXXXXXXXX",
+  targets: ["MyApp", "MyAppExtension"]
+)
+```
+
+---
+
+## Provisioning Profile Management
+
+### update_project_provisioning
+
+Update provisioning profile settings in your Xcode project.
+
+#### Basic Usage
+
+```ruby
+update_project_provisioning(
+  xcodeproj: "MyApp.xcodeproj",
+  profile: "./MyApp.mobileprovision"
+)
+```
+
+#### Parameters
+
+<ParamField path="xcodeproj" type="string">
+  Path to your Xcode project
+</ParamField>
+
+<ParamField path="profile" type="string">
+  Path to provisioning profile (.mobileprovision)
+</ParamField>
+
+<ParamField path="target_filter" type="string">
+  Regular expression to filter targets
+</ParamField>
+
+<ParamField path="build_configuration" type="string">
+  Build configuration to update
+</ParamField>
+
+<ParamField path="code_signing_identity" type="string">
+  Code signing identity to use
+</ParamField>
+
+#### Examples
+
+```ruby
+# Update provisioning profile
+update_project_provisioning(
+  xcodeproj: "MyApp.xcodeproj",
+  profile: "./MyApp.mobileprovision"
+)
+
+# Update specific configuration
+update_project_provisioning(
+  xcodeproj: "MyApp.xcodeproj",
+  profile: "./MyApp.mobileprovision",
+  build_configuration: "Release"
+)
+
+# Filter targets with regex
+update_project_provisioning(
+  xcodeproj: "MyApp.xcodeproj",
+  profile: "./MyApp.mobileprovision",
+  target_filter: ".*MyApp.*",
+  code_signing_identity: "iPhone Distribution"
+)
+```
+
+---
+
+## Version Control Integration
+
+### commit_version_bump
+
+Commit version and build number changes to git.
+
+#### Basic Usage
+
+```ruby
+commit_version_bump
+```
+
+#### Parameters
+
+<ParamField path="message" type="string">
+  Custom commit message
+</ParamField>
+
+<ParamField path="xcodeproj" type="string">
+  Path to Xcode project
+</ParamField>
+
+<ParamField path="force" type="boolean" default="false">
+  Force commit even if repo is not clean
+</ParamField>
+
+<ParamField path="settings" type="boolean" default="false">
+  Include .xcodeproj/project.pbxproj changes
+</ParamField>
+
+<ParamField path="include" type="array">
+  Additional files to include in commit
+</ParamField>
+
+#### Examples
+
+```ruby
+# Basic version bump commit
+increment_build_number
+commit_version_bump
+
+# Custom message
+commit_version_bump(
+  message: "Bumped version to #{get_version_number}"
+)
+
+# Include additional files
+commit_version_bump(
+  message: "Version bump",
+  include: ["CHANGELOG.md", "README.md"]
+)
+
+# Commit project settings changes
+commit_version_bump(
+  settings: true,
+  xcodeproj: "./MyApp.xcodeproj"
+)
+```
+
+---
+
+### add_git_tag
+
+Add a git tag to the repository.
+
+#### Basic Usage
+
+```ruby
+add_git_tag
+```
+
+#### Parameters
+
+<ParamField path="tag" type="string">
+  Tag name to create
+</ParamField>
+
+<ParamField path="message" type="string">
+  Tag message (creates annotated tag)
+</ParamField>
+
+<ParamField path="commit" type="string">
+  Commit to tag (defaults to HEAD)
+</ParamField>
+
+<ParamField path="force" type="boolean" default="false">
+  Force overwrite existing tag
+</ParamField>
+
+<ParamField path="sign" type="boolean" default="false">
+  Create GPG-signed tag
+</ParamField>
+
+#### Examples
+
+```ruby
+# Simple tag
+add_git_tag(tag: "v1.0.0")
+
+# Annotated tag with message
+add_git_tag(
+  tag: "v1.0.0",
+  message: "Release version 1.0.0"
+)
+
+# Tag with version from Xcode
+version = get_version_number
+build = get_build_number
+add_git_tag(
+  tag: "v#{version}-#{build}",
+  message: "Version #{version} Build #{build}"
+)
+
+# Force update existing tag
+add_git_tag(
+  tag: "latest",
+  force: true
+)
+
+# Signed tag
+add_git_tag(
+  tag: "v1.0.0",
+  message: "Release 1.0.0",
+  sign: true
+)
+```
+
+---
+
+## Complete Project Management Workflows
+
+### Initial Project Setup
+
+```ruby
+lane :setup do
+  # Update team
+  update_project_team(
+    path: "MyApp.xcodeproj",
+    teamid: "XXXXXXXXXX"
+  )
+  
+  # Configure code signing
+  update_code_signing_settings(
+    use_automatic_signing: false,
+    path: "MyApp.xcodeproj",
+    team_id: "XXXXXXXXXX",
+    code_sign_identity: "iPhone Developer",
+    profile_name: "Development Profile"
+  )
+  
+  # Set bundle identifier
+  update_app_identifier(
+    xcodeproj: "MyApp.xcodeproj",
+    plist_path: "MyApp/Info.plist",
+    app_identifier: "com.example.app"
+  )
+end
+```
+
+### Release Preparation
+
+```ruby
+lane :prepare_release do |options|
+  # Ensure clean git state
+  ensure_git_status_clean
+  
+  # Increment version
+  if options[:version]
+    increment_version_number(version_number: options[:version])
+  else
+    increment_version_number(bump_type: "minor")
+  end
+  
+  # Reset build number
+  increment_build_number(build_number: 1)
+  
+  # Update code signing for release
+  update_code_signing_settings(
+    use_automatic_signing: false,
+    path: "MyApp.xcodeproj",
+    build_configurations: ["Release"],
+    profile_name: "App Store Profile",
+    code_sign_identity: "iPhone Distribution"
+  )
+  
+  # Commit changes
+  version = get_version_number
+  commit_version_bump(
+    message: "Prepare for release #{version}",
+    include: ["CHANGELOG.md"]
+  )
+  
+  # Create tag
+  add_git_tag(
+    tag: "v#{version}",
+    message: "Release version #{version}"
+  )
+  
+  # Push to remote
+  push_to_git_remote(
+    tags: true
+  )
+end
+```
+
+### Multi-Target Configuration
+
+```ruby
+lane :configure_targets do
+  targets = ["MyApp", "MyAppWidget", "MyAppExtension"]
+  
+  targets.each do |target|
+    # Update team
+    update_project_team(
+      path: "MyApp.xcodeproj",
+      teamid: "XXXXXXXXXX",
+      targets: [target]
+    )
+    
+    # Configure signing
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "MyApp.xcodeproj",
+      targets: [target],
+      profile_name: "#{target} Profile"
+    )
+  end
+end
+```
+
+### Environment-Specific Configuration
+
+```ruby
+lane :configure do |options|
+  environment = options[:environment] || "production"
+  
+  case environment
+  when "development"
+    update_code_signing_settings(
+      use_automatic_signing: true,
+      path: "MyApp.xcodeproj",
+      team_id: "XXXXXXXXXX"
+    )
+  when "staging"
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "MyApp.xcodeproj",
+      bundle_identifier: "com.example.app.staging",
+      profile_name: "Staging AdHoc Profile"
+    )
+  when "production"
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "MyApp.xcodeproj",
+      bundle_identifier: "com.example.app",
+      profile_name: "App Store Profile",
+      code_sign_identity: "iPhone Distribution"
+    )
+  end
+end
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Version control project changes">
+    Always commit project setting changes:
+    
+    ```ruby
+    update_code_signing_settings(...)
+    git_commit(
+      path: "MyApp.xcodeproj/project.pbxproj",
+      message: "Update code signing settings"
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Use manual signing for CI/CD">
+    Disable automatic signing in CI environments:
+    
+    ```ruby
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "MyApp.xcodeproj"
+    )
+    match(type: "appstore", readonly: true)
+    ```
+  </Accordion>
+  
+  <Accordion title="Configure all targets">
+    Don't forget about app extensions and widgets:
+    
+    ```ruby
+    all_targets = ["MyApp", "MyAppWidget", "MyAppExtension"]
+    update_code_signing_settings(
+      targets: all_targets,
+      ...
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Tag releases">
+    Create git tags for all releases:
+    
+    ```ruby
+    version = get_version_number
+    add_git_tag(
+      tag: "v#{version}",
+      message: "Release #{version}"
+    )
+    push_to_git_remote(tags: true)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Actions
+
+- [match](/actions/code-signing#match) - Sync code signing
+- [increment_build_number](/actions/versioning#increment_build_number) - Manage versions
+- [build_app](/actions/building#build_app) - Build with settings
+- [ensure_git_status_clean](/actions/git) - Check git status

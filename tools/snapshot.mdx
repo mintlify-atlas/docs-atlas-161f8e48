@@ -1,0 +1,352 @@
+---
+title: snapshot
+description: Automate taking localized screenshots of your iOS app on every device
+---
+
+## Overview
+
+snapshot automates the process of taking localized screenshots for your iOS app on every device. It uses UI Tests to navigate through your app and capture screenshots in all required languages and device types.
+
+<Info>
+snapshot integrates with [frameit](/tools/frameit) to add device frames to your screenshots automatically.
+</Info>
+
+## Installation
+
+snapshot is part of fastlane. Install it with:
+
+```bash
+fastlane snapshot
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Initialize snapshot">
+    Create a new Snapfile in your project directory:
+    
+    ```bash
+    fastlane snapshot init
+    ```
+    
+    This creates a `Snapfile` and `SnapshotHelper.swift` in your project.
+  </Step>
+  
+  <Step title="Add SnapshotHelper to your UI Test target">
+    Add the generated `SnapshotHelper.swift` to your UI Test target in Xcode.
+  </Step>
+  
+  <Step title="Update your UI Tests">
+    In your UI tests, call `setupSnapshot(app)` before launching your app:
+    
+    ```swift
+let app = XCUIApplication()
+setupSnapshot(app)
+app.launch()
+    ```
+    
+    Take screenshots by calling:
+    
+    ```swift
+snapshot("01LoginScreen")
+    ```
+  </Step>
+  
+  <Step title="Run snapshot">
+    ```bash
+fastlane snapshot
+    ```
+  </Step>
+</Steps>
+
+## Configuration
+
+Configure snapshot in your `Snapfile`:
+
+```ruby
+devices([
+  "iPhone 15 Pro",
+  "iPhone 15 Pro Max",
+  "iPhone SE (3rd generation)",
+  "iPad Pro (12.9-inch) (6th generation)"
+])
+
+languages([
+  "en-US",
+  "de-DE",
+  "es-ES",
+  "fr-FR"
+])
+
+scheme("MyAppUITests")
+
+output_directory("./screenshots")
+
+clear_previous_screenshots(true)
+```
+
+## Key Options
+
+<ParamField path="devices" type="array">
+  List of device names to take screenshots from. Must match simulator names.
+  
+  ```ruby
+  devices(["iPhone 15 Pro", "iPad Pro (12.9-inch) (6th generation)"])
+  ```
+</ParamField>
+
+<ParamField path="languages" type="array" default="['en-US']">
+  List of languages to generate screenshots for.
+  
+  ```ruby
+  languages(["en-US", "de-DE", "es-ES"])
+  ```
+</ParamField>
+
+<ParamField path="scheme" type="string">
+  The Xcode scheme for your UI Tests.
+  
+  ```ruby
+  scheme("MyAppUITests")
+  ```
+</ParamField>
+
+<ParamField path="output_directory" type="string" default="fastlane/screenshots">
+  Directory where screenshots will be stored.
+  
+  ```ruby
+  output_directory("./screenshots")
+  ```
+</ParamField>
+
+<ParamField path="clear_previous_screenshots" type="boolean" default="false">
+  Automatically clear previously generated screenshots.
+  
+  ```ruby
+  clear_previous_screenshots(true)
+  ```
+</ParamField>
+
+<ParamField path="reinstall_app" type="boolean" default="false">
+  Automatically uninstall the app before running.
+  
+  ```ruby
+  reinstall_app(true)
+  ```
+</ParamField>
+
+<ParamField path="erase_simulator" type="boolean" default="false">
+  Automatically erase the simulator before running.
+  
+  ```ruby
+  erase_simulator(true)
+  ```
+</ParamField>
+
+<ParamField path="override_status_bar" type="boolean" default="false">
+  Override the status bar to show 9:41 AM, full battery, and full reception.
+  
+  ```ruby
+  override_status_bar(true)
+  ```
+</ParamField>
+
+<ParamField path="localize_simulator" type="boolean" default="false">
+  Configure the Simulator's system language.
+  
+  ```ruby
+  localize_simulator(true)
+  ```
+</ParamField>
+
+<ParamField path="dark_mode" type="boolean">
+  Configure the Simulator to be in dark mode (false for light, true for dark).
+  
+  ```ruby
+  dark_mode(true)
+  ```
+</ParamField>
+
+<ParamField path="number_of_retries" type="integer" default="1">
+  Number of times a test can fail before snapshot stops retrying.
+  
+  ```ruby
+  number_of_retries(3)
+  ```
+</ParamField>
+
+<ParamField path="concurrent_simulators" type="boolean" default="true">
+  Take snapshots on multiple simulators concurrently.
+  
+  ```ruby
+  concurrent_simulators(true)
+  ```
+</ParamField>
+
+## CLI Commands
+
+<CodeGroup>
+
+```bash Run snapshot
+fastlane snapshot
+```
+
+```bash Initialize
+fastlane snapshot init
+```
+
+```bash Update SnapshotHelper
+fastlane snapshot update
+```
+
+```bash Reset simulators
+fastlane snapshot reset_simulators
+```
+
+```bash Clear derived data
+fastlane snapshot clear_derived_data
+```
+
+</CodeGroup>
+
+## Advanced Usage
+
+### Launch Arguments
+
+Pass custom launch arguments to your app:
+
+```ruby
+launch_arguments([
+  "-MockData YES",
+  "-SkipOnboarding"
+])
+```
+
+### Add Media to Simulator
+
+Add photos or videos to the simulator before running:
+
+```ruby
+add_photos(["path/to/photo1.jpg", "path/to/photo2.jpg"])
+add_videos(["path/to/video.mp4"])
+```
+
+### Custom HTML Template
+
+Provide a custom HTML template for the summary:
+
+```ruby
+html_template("./custom_template.html")
+```
+
+### Test-Specific Options
+
+```ruby
+# Only test specific test cases
+only_testing(["MyAppUITests/LoginTests/testSuccessfulLogin"])
+
+# Skip specific test cases
+skip_testing(["MyAppUITests/LoginTests/testFailedLogin"])
+
+# Use a testplan
+testplan("MyAppTestPlan")
+```
+
+## Using with fastlane
+
+```ruby
+lane :screenshots do
+  snapshot
+end
+```
+
+With custom parameters:
+
+```ruby
+lane :screenshots do
+  snapshot(
+    scheme: "MyAppUITests",
+    devices: ["iPhone 15 Pro"],
+    languages: ["en-US", "de-DE"],
+    clear_previous_screenshots: true,
+    override_status_bar: true,
+    dark_mode: false
+  )
+end
+```
+
+## Environment Variables
+
+<ResponseField name="SNAPSHOT_WORKSPACE" type="string">
+  Path to the workspace file
+</ResponseField>
+
+<ResponseField name="SNAPSHOT_PROJECT" type="string">
+  Path to the project file
+</ResponseField>
+
+<ResponseField name="SNAPSHOT_SCHEME" type="string">
+  The scheme to use for UI Tests
+</ResponseField>
+
+<ResponseField name="SNAPSHOT_OUTPUT_DIRECTORY" type="string">
+  Directory for storing screenshots
+</ResponseField>
+
+<ResponseField name="SNAPSHOT_CLEAR_PREVIOUS_SCREENSHOTS" type="boolean">
+  Clear previous screenshots before running
+</ResponseField>
+
+<ResponseField name="SNAPSHOT_APP_IDENTIFIER" type="string">
+  Bundle identifier (needed when enabling reinstall_app)
+</ResponseField>
+
+## Tips & Best Practices
+
+<Tip>
+**Organize your screenshots**: Use descriptive names like `01LoginScreen`, `02MainFeed`, `03Profile` to keep them in order.
+</Tip>
+
+<Warning>
+**Simulator names must match exactly**: Make sure the device names in your Snapfile match the available simulators on your system.
+</Warning>
+
+<Tip>
+**Speed up execution**: Use `concurrent_simulators(true)` to run tests on multiple simulators at the same time.
+</Tip>
+
+<Check>
+**Test your UI tests first**: Make sure your UI tests run successfully before using snapshot.
+</Check>
+
+## Troubleshooting
+
+### Simulators not found
+
+List available simulators:
+
+```bash
+instruments -s devices
+```
+
+### Update SnapshotHelper
+
+If you're experiencing issues after updating fastlane:
+
+```bash
+fastlane snapshot update
+```
+
+### Reset simulators
+
+If simulators are in a bad state:
+
+```bash
+fastlane snapshot reset_simulators
+```
+
+## Related Tools
+
+- [frameit](/tools/frameit) - Add device frames to your screenshots
+- [deliver](/tools/deliver) - Upload screenshots to App Store Connect
+- [screengrab](/tools/screengrab) - Android screenshot automation

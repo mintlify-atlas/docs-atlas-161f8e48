@@ -1,0 +1,559 @@
+---
+title: Plugin Development
+description: Learn how to create, test, and publish fastlane plugins
+---
+
+fastlane plugins allow you to extend fastlane with custom actions and share them with the community. This guide covers everything you need to know about creating and publishing plugins.
+
+## Why Create a Plugin?
+
+Create a plugin when you want to:
+
+- Share custom actions with the community
+- Integrate with external services or APIs
+- Package reusable functionality
+- Extend fastlane without modifying the core
+
+<Note>
+fastlane no longer accepts new actions into the core repository. All new actions should be created as plugins.
+</Note>
+
+## Plugin Architecture
+
+A fastlane plugin is a Ruby gem that follows the naming convention `fastlane-plugin-<name>` and contains:
+
+- One or more actions
+- Helper classes (optional)
+- Tests
+- Documentation
+
+### Plugin Structure
+
+```
+fastlane-plugin-example/
+├── lib/
+│   └── fastlane/
+│       └── plugin/
+│           └── example/
+│               ├── actions/
+│               │   └── example_action.rb
+│               ├── helper/
+│               │   └── example_helper.rb
+│               └── version.rb
+├── spec/
+│   ├── example_action_spec.rb
+│   └── spec_helper.rb
+├── fastlane-plugin-example.gemspec
+├── Gemfile
+├── LICENSE
+└── README.md
+```
+
+## Creating a New Plugin
+
+### Generate Plugin Scaffold
+
+Use the built-in generator to create a new plugin:
+
+```bash
+fastlane new_plugin [plugin_name]
+```
+
+**Example:**
+```bash
+fastlane new_plugin my_service
+```
+
+The generator will:
+1. Ask for plugin details (author, email, summary)
+2. Create the plugin structure
+3. Set up Git repository
+4. Create a sample action
+
+### Plugin Name Guidelines
+
+- Use lowercase letters
+- Use underscores (`_`) to separate words
+- Keep it descriptive and concise
+- Avoid `fastlane` prefix (added automatically)
+
+**Good names:**
+- `my_service` → `fastlane-plugin-my_service`
+- `slack_notify` → `fastlane-plugin-slack_notify`
+
+**Avoid:**
+- `fastlane-my-service` (no hyphens)
+- `MyService` (use snake_case)
+
+## Creating Actions
+
+### Action Template
+
+The generator creates a basic action template:
+
+```ruby
+module Fastlane
+  module Actions
+    class MyServiceAction < Action
+      def self.run(params)
+        UI.message("Using parameter: #{params[:api_token]}")
+        
+        # Your action logic here
+        result = perform_action(params)
+        
+        # Return value (optional)
+        return result
+      end
+
+      def self.description
+        "A short description with <= 80 characters"
+      end
+
+      def self.details
+        "You can use this action to integrate with My Service. " \
+        "It handles authentication and API calls automatically."
+      end
+
+      def self.available_options
+        [
+          FastlaneCore::ConfigItem.new(
+            key: :api_token,
+            env_name: "FL_MY_SERVICE_API_TOKEN",
+            description: "API Token for My Service",
+            optional: false,
+            type: String
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :endpoint,
+            env_name: "FL_MY_SERVICE_ENDPOINT",
+            description: "API endpoint URL",
+            default_value: "https://api.myservice.com",
+            optional: true,
+            type: String
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :verbose,
+            description: "Enable verbose logging",
+            default_value: false,
+            optional: true,
+            type: Boolean
+          )
+        ]
+      end
+
+      def self.output
+        [
+          ['MY_SERVICE_RESPONSE', 'The API response from My Service']
+        ]
+      end
+
+      def self.return_value
+        "Returns a hash containing the API response"
+      end
+
+      def self.authors
+        ["Your Name"]
+      end
+
+      def self.is_supported?(platform)
+        [:ios, :android].include?(platform)
+      end
+
+      def self.example_code
+        [
+          'my_service(api_token: "token123")',
+          'my_service(
+            api_token: "token123",
+            endpoint: "https://custom.api.com",
+            verbose: true
+          )'
+        ]
+      end
+
+      def self.category
+        :misc
+      end
+
+      private
+
+      def self.perform_action(params)
+        # Implementation
+      end
+    end
+  end
+end
+```
+
+### ConfigItem Options
+
+Configure action parameters with various validation options:
+
+```ruby
+FastlaneCore::ConfigItem.new(
+  key: :parameter_name,
+  env_name: "FL_MY_ACTION_PARAMETER",  # Environment variable name
+  description: "Description of the parameter",
+  optional: false,                      # Required parameter
+  default_value: "default",             # Default value if not provided
+  type: String,                         # Expected type
+  verify_block: proc do |value|         # Custom validation
+    UI.user_error!("Invalid value") unless value.length > 0
+  end,
+  is_string: true,                      # Validates as string
+  conflicting_options: [:other_param],  # Can't be used with these
+  conflict_block: proc do |value|       # Custom conflict check
+    # ...
+  end,
+  deprecated: "Use :new_param instead"  # Mark as deprecated
+)
+```
+
+### Using Helpers
+
+Create helper classes for shared functionality:
+
+```ruby
+# lib/fastlane/plugin/my_service/helper/my_service_helper.rb
+module Fastlane
+  module Helper
+    class MyServiceHelper
+      def self.authenticate(api_token)
+        # Authentication logic
+      end
+
+      def self.make_request(endpoint, params)
+        # HTTP request logic
+      end
+    end
+  end
+end
+```
+
+**Use in action:**
+```ruby
+def self.run(params)
+  Helper::MyServiceHelper.authenticate(params[:api_token])
+  response = Helper::MyServiceHelper.make_request(
+    params[:endpoint],
+    params
+  )
+  return response
+end
+```
+
+## Testing Plugins
+
+### Write RSpec Tests
+
+The generator creates a test template:
+
+```ruby
+# spec/my_service_action_spec.rb
+require 'spec_helper'
+
+describe Fastlane::Actions::MyServiceAction do
+  describe '#run' do
+    it 'sends request with valid token' do
+      result = Fastlane::Actions::MyServiceAction.run(
+        api_token: "test_token",
+        endpoint: "https://test.api.com"
+      )
+      
+      expect(result).not_to be_nil
+    end
+
+    it 'raises error with invalid token' do
+      expect do
+        Fastlane::Actions::MyServiceAction.run(
+          api_token: ""
+        )
+      end.to raise_error(FastlaneCore::Interface::FastlaneError)
+    end
+  end
+
+  describe 'parameters' do
+    it 'has api_token parameter' do
+      options = Fastlane::Actions::MyServiceAction.available_options
+      api_token = options.find { |o| o.key == :api_token }
+      
+      expect(api_token).not_to be_nil
+      expect(api_token.optional).to be_falsey
+    end
+  end
+end
+```
+
+### Run Tests
+
+```bash
+# Run all tests
+bundle exec rspec
+
+# Run specific test file
+bundle exec rspec spec/my_service_action_spec.rb
+
+# Run with coverage
+bundle exec rspec --format documentation
+```
+
+### Testing with a Fastfile
+
+Create a test Fastfile in your plugin directory:
+
+```ruby
+# fastlane/Fastfile
+lane :test do
+  my_service(
+    api_token: "test_token",
+    verbose: true
+  )
+end
+```
+
+Run with:
+```bash
+bundle exec fastlane test
+```
+
+## Using Your Plugin Locally
+
+### Add Plugin to Project
+
+From your fastlane-enabled project:
+
+```bash
+fastlane add_plugin my_service
+```
+
+When prompted, provide the **full path** to your plugin directory:
+```
+/Users/yourname/dev/fastlane-plugin-my_service
+```
+
+This adds the plugin to your `Pluginfile`:
+
+```ruby
+# fastlane/Pluginfile
+gem 'fastlane-plugin-my_service', path: '/path/to/plugin'
+```
+
+### Update Plugin Code
+
+After making changes to your plugin:
+
+```bash
+# Reinstall to pick up changes
+bundle install
+```
+
+## Publishing Your Plugin
+
+### Prerequisites
+
+1. RubyGems account (create at [rubygems.org](https://rubygems.org))
+2. Complete README with usage examples
+3. Tests passing
+4. Updated version number
+
+### Prepare for Release
+
+1. **Update version:**
+```ruby
+# lib/fastlane/plugin/my_service/version.rb
+module Fastlane
+  module MyService
+    VERSION = "0.1.0"
+  end
+end
+```
+
+2. **Update README:**
+- Clear usage examples
+- Available options documented
+- Requirements listed
+- Installation instructions
+
+3. **Update gemspec:**
+```ruby
+# fastlane-plugin-my_service.gemspec
+Gem::Specification.new do |spec|
+  spec.name          = 'fastlane-plugin-my_service'
+  spec.version       = Fastlane::MyService::VERSION
+  spec.author        = 'Your Name'
+  spec.email         = 'you@example.com'
+  spec.summary       = 'Brief plugin summary'
+  spec.homepage      = 'https://github.com/username/fastlane-plugin-my_service'
+  spec.license       = 'MIT'
+  
+  # ...
+end
+```
+
+### Build and Release
+
+```bash
+# Build gem
+gem build fastlane-plugin-my_service.gemspec
+
+# Test the gem
+gem install ./fastlane-plugin-my_service-0.1.0.gem
+
+# Publish to RubyGems
+gem push fastlane-plugin-my_service-0.1.0.gem
+```
+
+### Automatic Publishing with Rake
+
+The plugin includes a Rakefile for easier releases:
+
+```bash
+# Bump version, build, and publish
+rake release
+```
+
+## Plugin Registry
+
+Once published to RubyGems, your plugin is automatically:
+
+- Listed in the [fastlane plugins registry](https://docs.fastlane.tools/plugins/available-plugins/)
+- Searchable via `fastlane search_plugins [query]`
+- Installable via `fastlane add_plugin my_service`
+
+## Best Practices
+
+### Documentation
+
+- Write clear descriptions and details
+- Provide multiple example_code snippets
+- Document all parameters thoroughly
+- Include a comprehensive README
+
+### Error Handling
+
+```ruby
+def self.run(params)
+  begin
+    result = api_call(params)
+    UI.success("Action completed successfully")
+    return result
+  rescue StandardError => e
+    UI.user_error!("Failed to complete action: #{e.message}")
+  end
+end
+```
+
+### User Interface
+
+Use appropriate UI methods:
+
+```ruby
+UI.message("Regular status update")
+UI.success("✅ Operation successful")
+UI.important("⚠️  Important information")
+UI.error("❌ Something went wrong")
+UI.user_error!("Fatal error - stops execution")
+```
+
+### Versioning
+
+Follow [Semantic Versioning](https://semver.org/):
+- **MAJOR**: Breaking changes
+- **MINOR**: New features (backward compatible)
+- **PATCH**: Bug fixes
+
+<Tip>
+Run `fastlane action my_service` after publishing to see how your plugin documentation appears to users.
+</Tip>
+
+## Advanced Features
+
+### Lane Context
+
+Share values between actions:
+
+```ruby
+module SharedValues
+  MY_SERVICE_RESPONSE = :MY_SERVICE_RESPONSE
+end
+
+def self.run(params)
+  result = perform_action(params)
+  Actions.lane_context[SharedValues::MY_SERVICE_RESPONSE] = result
+  return result
+end
+```
+
+Access in other actions:
+```ruby
+response = Actions.lane_context[SharedValues::MY_SERVICE_RESPONSE]
+```
+
+### Shell Commands
+
+Execute shell commands safely:
+
+```ruby
+def self.run(params)
+  command = "curl -X POST #{params[:endpoint]}"
+  Actions.sh(command)
+end
+```
+
+### File Operations
+
+```ruby
+# Read file
+content = File.read("path/to/file")
+
+# Write file
+File.write("output.json", JSON.pretty_generate(data))
+
+# Check existence
+unless File.exist?("required_file")
+  UI.user_error!("Required file not found")
+end
+```
+
+## Troubleshooting
+
+<Accordion title="Plugin not loading in project">
+
+Ensure:
+1. You've run `bundle install` after adding the plugin
+2. Your `Pluginfile` is properly configured
+3. The plugin gem is built correctly
+
+Run with verbose mode:
+```bash
+fastlane lanes --verbose
+```
+</Accordion>
+
+<Accordion title="Tests failing">
+
+Check:
+- All dependencies installed: `bundle install`
+- RSpec is available: `bundle exec rspec --version`
+- Fixtures and test data are correct
+
+Run with debug:
+```bash
+DEBUG=1 bundle exec rspec
+```
+</Accordion>
+
+<Accordion title="Gem push fails">
+
+Verify:
+- You're logged in to RubyGems: `gem signin`
+- Gem name is unique (check rubygems.org)
+- Gemspec is valid: `gem build *.gemspec`
+- Version hasn't been published already
+</Accordion>
+
+## Resources
+
+- [Plugin Template](https://github.com/fastlane/fastlane-plugin-template)
+- [Available Plugins](https://docs.fastlane.tools/plugins/available-plugins/)
+- [RubyGems Guides](https://guides.rubygems.org/)
+- [RSpec Documentation](https://rspec.info/)

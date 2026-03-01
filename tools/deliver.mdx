@@ -1,0 +1,618 @@
+---
+title: deliver
+description: Upload screenshots, metadata, and binaries to App Store Connect
+---
+
+## Overview
+
+deliver uploads screenshots, metadata, and binaries to App Store Connect using a single command. It's the easiest way to automate your App Store deployment.
+
+<Info>
+deliver is the best way to keep your App Store metadata in sync and automate releases.
+</Info>
+
+## Installation
+
+deliver is part of fastlane. Install it with:
+
+```bash
+fastlane deliver
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Initialize deliver">
+    ```bash
+    fastlane deliver init
+    ```
+    
+    This downloads your existing metadata and screenshots into a `metadata` folder.
+  </Step>
+  
+  <Step title="Edit your metadata">
+    Update files in the `metadata` folder with your app information.
+  </Step>
+  
+  <Step title="Upload to App Store">
+    ```bash
+    fastlane deliver
+    ```
+    
+    This uploads your app, screenshots, and metadata to App Store Connect.
+  </Step>
+</Steps>
+
+## CLI Commands
+
+<CodeGroup>
+
+```bash Upload everything
+fastlane deliver
+```
+
+```bash Initialize / Download metadata
+fastlane deliver init
+```
+
+```bash Submit specific build
+fastlane deliver submit_build
+```
+
+```bash Download screenshots
+fastlane deliver download_screenshots
+```
+
+```bash Download metadata
+fastlane deliver download_metadata
+```
+
+```bash Generate summary
+fastlane deliver generate_summary
+```
+
+</CodeGroup>
+
+## Metadata Management
+
+### Folder Structure
+
+deliver organizes metadata by locale:
+
+```
+metadata/
+├── en-US/
+│   ├── name.txt
+│   ├── subtitle.txt
+│   ├── description.txt
+│   ├── keywords.txt
+│   ├── release_notes.txt
+│   ├── marketing_url.txt
+│   ├── support_url.txt
+│   └── privacy_url.txt
+├── de-DE/
+│   ├── name.txt
+│   ├── description.txt
+│   └── ...
+└── screenshots/
+    ├── en-US/
+    └── de-DE/
+```
+
+### Download Existing Metadata
+
+```bash
+fastlane deliver download_metadata
+```
+
+This creates the folder structure with your current App Store information.
+
+## Key Options
+
+<ParamField path="username" type="string">
+  Your Apple ID username.
+  
+  ```ruby
+  deliver(username: "user@example.com")
+  ```
+</ParamField>
+
+<ParamField path="app_identifier" type="string">
+  The bundle identifier of your app.
+  
+  ```ruby
+  deliver(app_identifier: "com.example.app")
+  ```
+</ParamField>
+
+<ParamField path="ipa" type="string">
+  Path to your IPA file.
+  
+  ```ruby
+  deliver(ipa: "./MyApp.ipa")
+  ```
+</ParamField>
+
+<ParamField path="pkg" type="string">
+  Path to your PKG file (macOS apps).
+  
+  ```ruby
+  deliver(pkg: "./MyApp.pkg")
+  ```
+</ParamField>
+
+<ParamField path="build_number" type="string">
+  If set, the build number to use instead of the one in the IPA.
+  
+  ```ruby
+  deliver(build_number: "42")
+  ```
+</ParamField>
+
+<ParamField path="platform" type="string" default="ios">
+  The platform to use (ios, appletvos, osx).
+  
+  ```ruby
+  deliver(platform: "osx")
+  ```
+</ParamField>
+
+<ParamField path="metadata_path" type="string">
+  Path to the folder containing the metadata files.
+  
+  ```ruby
+  deliver(metadata_path: "./fastlane/metadata")
+  ```
+</ParamField>
+
+<ParamField path="screenshots_path" type="string">
+  Path to the folder containing screenshots.
+  
+  ```ruby
+  deliver(screenshots_path: "./screenshots")
+  ```
+</ParamField>
+
+<ParamField path="skip_binary_upload" type="boolean" default="false">
+  Skip uploading an IPA or PKG to App Store Connect.
+  
+  ```ruby
+  deliver(skip_binary_upload: true)
+  ```
+</ParamField>
+
+<ParamField path="skip_screenshots" type="boolean" default="false">
+  Don't upload screenshots.
+  
+  ```ruby
+  deliver(skip_screenshots: true)
+  ```
+</ParamField>
+
+<ParamField path="skip_metadata" type="boolean" default="false">
+  Don't upload metadata (e.g., title, description).
+  
+  ```ruby
+  deliver(skip_metadata: true)
+  ```
+</ParamField>
+
+<ParamField path="skip_app_version_update" type="boolean" default="false">
+  Don't create or update the app version that is being prepared for submission.
+  
+  ```ruby
+  deliver(skip_app_version_update: true)
+  ```
+</ParamField>
+
+<ParamField path="force" type="boolean" default="false">
+  Skip verification of HTML preview file.
+  
+  ```ruby
+  deliver(force: true)
+  ```
+</ParamField>
+
+<ParamField path="overwrite_screenshots" type="boolean" default="false">
+  Clear all previously uploaded screenshots before uploading new ones.
+  
+  ```ruby
+  deliver(overwrite_screenshots: true)
+  ```
+</ParamField>
+
+<ParamField path="sync_screenshots" type="boolean" default="false">
+  Sync screenshots with local ones (removes old screenshots).
+  
+  ```ruby
+  deliver(sync_screenshots: true)
+  ```
+</ParamField>
+
+<ParamField path="submit_for_review" type="boolean" default="false">
+  Submit the new version for review after uploading everything.
+  
+  ```ruby
+  deliver(submit_for_review: true)
+  ```
+</ParamField>
+
+<ParamField path="automatic_release" type="boolean">
+  Should the app be automatically released once approved?
+  
+  ```ruby
+  deliver(automatic_release: true)
+  ```
+</ParamField>
+
+<ParamField path="phased_release" type="boolean" default="false">
+  Enable the phased release feature of App Store Connect.
+  
+  ```ruby
+  deliver(phased_release: true)
+  ```
+</ParamField>
+
+<ParamField path="reset_ratings" type="boolean" default="false">
+  Reset the summary rating when you release a new version.
+  
+  ```ruby
+  deliver(reset_ratings: true)
+  ```
+</ParamField>
+
+<ParamField path="price_tier" type="integer">
+  The price tier of this application.
+  
+  ```ruby
+  deliver(price_tier: 0)  # Free
+  ```
+</ParamField>
+
+<ParamField path="app_rating_config_path" type="string">
+  Path to the app rating's config JSON file.
+  
+  ```ruby
+  deliver(app_rating_config_path: "./rating_config.json")
+  ```
+</ParamField>
+
+<ParamField path="submission_information" type="hash">
+  Extra information for the submission (e.g., compliance specifications).
+  
+  ```ruby
+  deliver(
+    submission_information: {
+      export_compliance_uses_encryption: false,
+      add_id_info_uses_idfa: false
+    }
+  )
+  ```
+</ParamField>
+
+<ParamField path="team_id" type="string">
+  The ID of your App Store Connect team.
+  
+  ```ruby
+  deliver(team_id: "123456789")
+  ```
+</ParamField>
+
+<ParamField path="team_name" type="string">
+  The name of your App Store Connect team.
+  
+  ```ruby
+  deliver(team_name: "Company Inc")
+  ```
+</ParamField>
+
+<ParamField path="app_version" type="string">
+  The version that should be edited or created.
+  
+  ```ruby
+  deliver(app_version: "1.2.0")
+  ```
+</ParamField>
+
+<ParamField path="copyright" type="string">
+  The copyright notice.
+  
+  ```ruby
+  deliver(copyright: "2024 Company Inc")
+  ```
+</ParamField>
+
+<ParamField path="primary_category" type="string">
+  The English name of the primary category (e.g., Business, Games).
+  
+  ```ruby
+  deliver(primary_category: "Business")
+  ```
+</ParamField>
+
+<ParamField path="secondary_category" type="string">
+  The English name of the secondary category.
+  
+  ```ruby
+  deliver(secondary_category: "Productivity")
+  ```
+</ParamField>
+
+<ParamField path="run_precheck_before_submit" type="boolean" default="true">
+  Run precheck before submitting to app review.
+  
+  ```ruby
+  deliver(run_precheck_before_submit: false)
+  ```
+</ParamField>
+
+## Using with fastlane
+
+### Basic Upload
+
+```ruby
+lane :release do
+  build_app
+  deliver
+end
+```
+
+### Upload with Metadata Only
+
+```ruby
+lane :update_metadata do
+  deliver(
+    skip_binary_upload: true,
+    skip_screenshots: true
+  )
+end
+```
+
+### Upload Screenshots Only
+
+```ruby
+lane :update_screenshots do
+  deliver(
+    skip_binary_upload: true,
+    skip_metadata: true,
+    overwrite_screenshots: true
+  )
+end
+```
+
+### Complete Release with Review
+
+```ruby
+lane :production do
+  build_app
+  
+  deliver(
+    submit_for_review: true,
+    automatic_release: true,
+    phased_release: false,
+    submission_information: {
+      export_compliance_uses_encryption: false,
+      add_id_info_uses_idfa: false
+    }
+  )
+end
+```
+
+### Submit Existing Build
+
+```ruby
+lane :submit_latest do
+  deliver(
+    build_number: "latest",
+    skip_binary_upload: true,
+    submit_for_review: true
+  )
+end
+```
+
+## Deliverfile
+
+Create a `Deliverfile` for persistent configuration:
+
+```ruby
+# Deliverfile
+
+app_identifier "com.example.app"
+username "user@example.com"
+
+metadata_path "./metadata"
+screenshots_path "./screenshots"
+
+skip_binary_upload false
+skip_screenshots false
+skip_metadata false
+
+submit_for_review true
+automatic_release true
+phased_release false
+
+submission_information({
+  export_compliance_uses_encryption: false,
+  add_id_info_uses_idfa: false
+})
+```
+
+Generate a template:
+
+```bash
+fastlane deliver init
+```
+
+## App Store Connect API
+
+deliver supports the App Store Connect API for authentication:
+
+```ruby
+deliver(
+  api_key_path: "./AuthKey.json"
+)
+```
+
+Or use a hash:
+
+```ruby
+deliver(
+  api_key: {
+    key_id: "ABC123",
+    issuer_id: "XYZ789",
+    key_filepath: "./AuthKey_ABC123.p8"
+  }
+)
+```
+
+## Screenshot Management
+
+### Organize Screenshots
+
+Place screenshots in device-specific folders:
+
+```
+screenshots/
+├── en-US/
+│   ├── iPhone 6.5"/
+│   │   ├── 01-home.png
+│   │   └── 02-detail.png
+│   ├── iPhone 5.5"/
+│   ├── iPad Pro (12.9")/
+│   └── ...
+└── de-DE/
+    └── ...
+```
+
+### Download Existing Screenshots
+
+```bash
+fastlane deliver download_screenshots
+```
+
+### Clear and Re-upload
+
+```ruby
+deliver(
+  overwrite_screenshots: true
+)
+```
+
+## Metadata Files
+
+### Supported Metadata Files
+
+- `name.txt` - App name (30 characters max)
+- `subtitle.txt` - Subtitle (30 characters max)
+- `description.txt` - Full description (4000 characters max)
+- `keywords.txt` - Keywords (100 characters max, comma-separated)
+- `promotional_text.txt` - Promotional text (170 characters max)
+- `release_notes.txt` - What's new (4000 characters max)
+- `marketing_url.txt` - Marketing URL
+- `support_url.txt` - Support URL
+- `privacy_url.txt` - Privacy Policy URL
+
+### Example: description.txt
+
+```text
+Welcome to MyApp - the best way to manage your tasks!
+
+Features:
+• Beautiful interface
+• Sync across devices
+• Offline support
+• And much more!
+
+Download now and get started!
+```
+
+## Environment Variables
+
+<ResponseField name="DELIVER_USERNAME" type="string">
+  Your Apple ID username
+</ResponseField>
+
+<ResponseField name="DELIVER_APP_IDENTIFIER" type="string">
+  The bundle identifier of your app
+</ResponseField>
+
+<ResponseField name="DELIVER_IPA_PATH" type="string">
+  Path to your IPA file
+</ResponseField>
+
+<ResponseField name="DELIVER_SKIP_BINARY_UPLOAD" type="boolean">
+  Skip uploading IPA/PKG
+</ResponseField>
+
+<ResponseField name="DELIVER_SKIP_SCREENSHOTS" type="boolean">
+  Don't upload screenshots
+</ResponseField>
+
+<ResponseField name="DELIVER_SKIP_METADATA" type="boolean">
+  Don't upload metadata
+</ResponseField>
+
+<ResponseField name="DELIVER_FORCE" type="boolean">
+  Skip HTML preview verification
+</ResponseField>
+
+<ResponseField name="DELIVER_SUBMIT_FOR_REVIEW" type="boolean">
+  Submit for review after upload
+</ResponseField>
+
+## Tips & Best Practices
+
+<Tip>
+**Use version control**: Keep your metadata folder in git to track changes over time.
+</Tip>
+
+<Warning>
+**Verify before submitting**: Use `deliver --force false` to preview changes before uploading.
+</Warning>
+
+<Tip>
+**Automate screenshots**: Combine with [snapshot](/tools/snapshot) to automatically generate localized screenshots.
+</Tip>
+
+<Check>
+**Run precheck**: Enable `run_precheck_before_submit` to catch common App Store rejection issues.
+</Check>
+
+## Troubleshooting
+
+### Wrong team selected
+
+Specify the team explicitly:
+
+```ruby
+deliver(
+  team_id: "123456789"
+)
+```
+
+### Upload fails
+
+Try forcing the upload:
+
+```ruby
+deliver(
+  force: true
+)
+```
+
+### Screenshots not uploading
+
+Check folder structure and file names. Use:
+
+```bash
+fastlane deliver download_screenshots
+```
+
+To see the expected format.
+
+## Related Tools
+
+- [snapshot](/tools/snapshot) - Automate screenshot generation
+- [frameit](/tools/frameit) - Frame your screenshots
+- [pilot](/tools/pilot) - Upload to TestFlight
+- [precheck](/tools/precheck) - Validate metadata before submission

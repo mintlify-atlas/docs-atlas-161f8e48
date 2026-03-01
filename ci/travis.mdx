@@ -1,0 +1,587 @@
+---
+title: Travis CI Integration
+description: Set up fastlane on Travis CI for automated iOS and macOS builds
+---
+
+## Overview
+
+Travis CI is a continuous integration platform that integrates with GitHub. The `setup_travis` action (or `setup_ci`) configures fastlane to work with Travis CI, handling keychains and code signing.
+
+## Quick Start
+
+Add this to your `Fastfile`:
+
+```ruby
+platform :ios do
+  before_all do
+    setup_travis
+  end
+
+  lane :test do
+    run_tests(scheme: "MyApp")
+  end
+
+  lane :beta do
+    match(type: "appstore")
+    build_app(scheme: "MyApp")
+    upload_to_testflight
+  end
+end
+```
+
+## The setup_travis Action
+
+The `setup_travis` action is a convenience wrapper around `setup_ci` that configures fastlane for Travis CI environments.
+
+### What it Does
+
+<Steps>
+  <Step title="Creates Temporary Keychain">
+    Sets up a temporary keychain for code signing
+    
+    - Keychain name: `fastlane_tmp_keychain`
+    - Empty password for CI compatibility
+    - Set as default keychain
+    - Auto-unlock enabled
+  </Step>
+  
+  <Step title="Configures Match">
+    Sets match to readonly mode
+    
+    - Prevents creating new certificates on CI
+    - Uses the temporary keychain
+    - Sets `MATCH_READONLY=true`
+  </Step>
+</Steps>
+
+### Usage
+
+```ruby
+# Basic usage (auto-detects Travis CI)
+setup_travis
+
+# Force setup even when not on Travis
+setup_travis(force: true)
+
+# Using setup_ci with explicit provider
+setup_ci(provider: "travis")
+
+# Custom keychain timeout (0 = no timeout)
+setup_ci(
+  provider: "travis",
+  timeout: 0
+)
+
+# Custom keychain name
+setup_ci(
+  provider: "travis",
+  keychain_name: "my_keychain"
+)
+```
+
+## Travis CI Configuration
+
+### Basic .travis.yml
+
+```yaml
+os: osx
+osx_image: xcode16.4
+language: ruby
+rvm: 3.1
+
+cache:
+  bundler: true
+  cocoapods: true
+  directories:
+    - Pods
+
+before_install:
+  - bundle install
+  - pod install
+
+script:
+  - bundle exec fastlane test
+
+branches:
+  only:
+    - main
+    - develop
+```
+
+### Advanced Configuration with Deployment
+
+```yaml
+os: osx
+osx_image: xcode16.4
+language: ruby
+rvm: 3.1
+
+env:
+  global:
+    - FL_OUTPUT_DIR=output
+    - FASTLANE_SKIP_UPDATE_CHECK=1
+    - FASTLANE_HIDE_CHANGELOG=1
+
+cache:
+  bundler: true
+  cocoapods: true
+  directories:
+    - vendor/bundle
+    - Pods
+    - ~/.cocoapods
+
+before_install:
+  # Set up Ruby
+  - gem update --system
+  - gem install bundler
+  
+  # Install dependencies
+  - bundle config set path 'vendor/bundle'
+  - bundle install --jobs=4 --retry=3
+  
+  # Install CocoaPods
+  - pod install --repo-update
+
+stages:
+  - test
+  - deploy
+
+jobs:
+  include:
+    # Test stage
+    - stage: test
+      name: "Run Tests"
+      script:
+        - bundle exec fastlane test
+    
+    # Deploy to TestFlight (only on main branch)
+    - stage: deploy
+      name: "Deploy to TestFlight"
+      if: branch = main AND type = push
+      script:
+        - bundle exec fastlane beta
+      
+      # Store build artifacts
+      after_success:
+        - ls -la output/
+    
+    # Deploy to App Store (only on tags)
+    - stage: deploy
+      name: "Deploy to App Store"
+      if: tag IS present
+      script:
+        - bundle exec fastlane release
+
+notifications:
+  email:
+    recipients:
+      - dev@example.com
+    on_success: change
+    on_failure: always
+```
+
+### Multi-Platform Testing
+
+```yaml
+os: osx
+language: ruby
+
+cache:
+  bundler: true
+  cocoapods: true
+
+matrix:
+  include:
+    # iOS Tests - Xcode 16.3
+    - name: "iOS Tests (Xcode 16.3)"
+      osx_image: xcode16.3
+      rvm: 3.1
+      script: bundle exec fastlane test
+    
+    # iOS Tests - Xcode 16.4
+    - name: "iOS Tests (Xcode 16.4)"
+      osx_image: xcode16.4
+      rvm: 3.2
+      script: bundle exec fastlane test
+    
+    # Deploy to TestFlight
+    - name: "Deploy Beta"
+      osx_image: xcode16.4
+      rvm: 3.2
+      if: branch = main
+      script: bundle exec fastlane beta
+
+before_install:
+  - bundle install
+  - pod install
+```
+
+### Build Matrix with Different Ruby Versions
+
+```yaml
+os: osx
+osx_image: xcode16.4
+language: ruby
+
+rvm:
+  - 3.1
+  - 3.2
+  - 3.3
+
+cache:
+  bundler: true
+
+script:
+  - bundle exec fastlane test
+
+matrix:
+  fast_finish: true
+  allow_failures:
+    - rvm: 3.3
+```
+
+## Environment Variables
+
+### Setting Up Encrypted Secrets
+
+Use Travis CI's encrypted environment variables:
+
+```bash
+# Install Travis CLI
+gem install travis
+
+# Encrypt variables
+travis encrypt MATCH_PASSWORD="your_password" --add
+travis encrypt FASTLANE_PASSWORD="your_password" --add
+```
+
+This adds to your `.travis.yml`:
+
+```yaml
+env:
+  global:
+    - secure: "encrypted_string_here..."
+```
+
+### Required Environment Variables
+
+Set these in Travis CI project settings or encrypt them:
+
+<CodeGroup>
+```yaml App Store Connect API Key
+env:
+  global:
+    - APP_STORE_CONNECT_API_KEY_KEY_ID=ABC123
+    - APP_STORE_CONNECT_API_KEY_ISSUER_ID=xyz-123-abc
+    # Encrypt the key content
+    - secure: "encrypted_key_content..."
+```
+
+```yaml Match Configuration
+env:
+  global:
+    - MATCH_GIT_URL=https://github.com/your-org/certificates.git
+    - secure: "encrypted_MATCH_PASSWORD..."
+    - secure: "encrypted_MATCH_GIT_BASIC_AUTHORIZATION..."
+```
+
+```yaml Apple ID (Legacy)
+env:
+  global:
+    - FASTLANE_USER=your@email.com
+    - secure: "encrypted_FASTLANE_PASSWORD..."
+    - secure: "encrypted_FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD..."
+```
+</CodeGroup>
+
+### Travis CI Built-in Variables
+
+Useful Travis CI variables:
+
+```bash
+TRAVIS=true                      # Indicates running on Travis
+CI=true                          # Generic CI indicator
+TRAVIS_BRANCH=main               # Current branch
+TRAVIS_BUILD_NUMBER=123          # Build number
+TRAVIS_COMMIT=abc123...          # Git commit SHA
+TRAVIS_TAG=v1.0.0                # Git tag (if any)
+TRAVIS_PULL_REQUEST=false        # PR number or 'false'
+TRAVIS_REPO_SLUG=user/repo       # Repository slug
+```
+
+Use in Fastfile:
+
+```ruby
+lane :beta do
+  # Use Travis build number
+  increment_build_number(
+    build_number: ENV['TRAVIS_BUILD_NUMBER']
+  )
+  
+  # Only upload from main branch
+  if ENV['TRAVIS_BRANCH'] == 'main' && ENV['TRAVIS_PULL_REQUEST'] == 'false'
+    upload_to_testflight
+  else
+    puts "Skipping upload - not on main branch"
+  end
+end
+```
+
+## Example Fastfile
+
+```ruby
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    setup_travis if is_ci
+  end
+
+  desc "Run tests"
+  lane :test do
+    run_tests(
+      scheme: "MyApp",
+      devices: ["iPhone 15"],
+      code_coverage: true
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    # Only deploy from main branch, not PRs
+    unless ENV['TRAVIS_PULL_REQUEST'] == 'false' && ENV['TRAVIS_BRANCH'] == 'main'
+      UI.important "Skipping deployment - not on main branch or is a PR"
+      next
+    end
+    
+    # Sync certificates (readonly on CI)
+    match(
+      type: "appstore",
+      readonly: is_ci
+    )
+    
+    # Use Travis build number
+    increment_build_number(
+      build_number: ENV['TRAVIS_BUILD_NUMBER']
+    )
+    
+    # Build
+    build_app(
+      scheme: "MyApp",
+      export_method: "app-store",
+      clean: true
+    )
+    
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      distribute_external: false
+    )
+    
+    # Notify team
+    slack(
+      message: "New beta build #{lane_context[SharedValues::BUILD_NUMBER]} uploaded to TestFlight!",
+      success: true
+    )
+  end
+
+  desc "Deploy to App Store"
+  lane :release do
+    # Only deploy when tagged
+    unless ENV['TRAVIS_TAG']
+      UI.important "Skipping release - not a tagged build"
+      next
+    end
+    
+    match(type: "appstore", readonly: is_ci)
+    
+    build_app(
+      scheme: "MyApp",
+      export_method: "app-store",
+      clean: true
+    )
+    
+    upload_to_app_store(
+      submit_for_review: false,
+      automatic_release: false,
+      force: true
+    )
+  end
+
+  after_all do |lane|
+    clean_build_artifacts if is_ci
+  end
+
+  error do |lane, exception|
+    slack(
+      message: "Lane #{lane} failed: #{exception.message}",
+      success: false
+    ) if is_ci
+  end
+end
+```
+
+## Best Practices
+
+### 1. Cache Dependencies
+
+Always cache to speed up builds:
+
+```yaml
+cache:
+  bundler: true
+  cocoapods: true
+  directories:
+    - vendor/bundle
+    - Pods
+    - ~/.cocoapods
+```
+
+### 2. Use Build Stages
+
+Separate test and deploy stages:
+
+```yaml
+stages:
+  - test
+  - name: deploy
+    if: branch = main AND type = push
+
+jobs:
+  include:
+    - stage: test
+      script: bundle exec fastlane test
+    - stage: deploy
+      script: bundle exec fastlane beta
+```
+
+### 3. Conditional Deployments
+
+```ruby
+lane :beta do
+  # Check if should deploy
+  should_deploy = ENV['TRAVIS_BRANCH'] == 'main' && 
+                  ENV['TRAVIS_PULL_REQUEST'] == 'false'
+  
+  unless should_deploy
+    UI.important "Skipping deployment"
+    next
+  end
+  
+  # Deploy
+  match(type: "appstore", readonly: true)
+  build_app(scheme: "MyApp")
+  upload_to_testflight
+end
+```
+
+### 4. Encrypt Sensitive Data
+
+Never commit unencrypted secrets:
+
+```bash
+# Encrypt each secret
+travis encrypt MATCH_PASSWORD="secret" --add
+travis encrypt FASTLANE_PASSWORD="secret" --add
+```
+
+### 5. Set Timeouts
+
+Travis has a default timeout. Disable keychain timeout:
+
+```ruby
+setup_ci(
+  provider: "travis",
+  timeout: 0  # No keychain timeout
+)
+```
+
+## Common Issues
+
+### Keychain Errors
+
+**Problem:** `User interaction is not allowed` or keychain errors
+
+**Solution:** Ensure `setup_travis` is called first:
+
+```ruby
+before_all do
+  setup_travis
+end
+```
+
+### Match Repository Access
+
+**Problem:** Can't clone match repository
+
+**Solution:** Add SSH key or use HTTPS with token:
+
+```bash
+# Generate SSH key without passphrase
+ssh-keygen -t rsa -b 4096 -C "travis@ci" -f travis_key -N ""
+
+# Encrypt private key
+travis encrypt-file travis_key --add
+
+# Add public key to GitHub
+```
+
+Then in `.travis.yml`:
+
+```yaml
+before_install:
+  - openssl aes-256-cbc -K $encrypted_key -iv $encrypted_iv -in travis_key.enc -out travis_key -d
+  - chmod 600 travis_key
+  - eval "$(ssh-agent -s)"
+  - ssh-add travis_key
+```
+
+### Build Timeout
+
+**Problem:** Build exceeds 50 minutes
+
+**Solution:** Optimize build time or request extended timeout:
+
+```ruby
+# Skip unnecessary operations
+skip_docs
+
+# Run tests on fewer devices
+run_tests(
+  scheme: "MyApp",
+  devices: ["iPhone 15"]  # Instead of all devices
+)
+
+# Disable code coverage if not needed
+run_tests(
+  scheme: "MyApp",
+  code_coverage: false
+)
+```
+
+### macOS Image Deprecation
+
+**Problem:** Xcode version no longer available
+
+**Solution:** Update to newer image:
+
+```yaml
+# Check available images
+# https://docs.travis-ci.com/user/reference/osx/
+osx_image: xcode16.4
+```
+
+## Migrating from Travis CI
+
+If Travis CI is no longer meeting your needs, consider:
+
+- [GitHub Actions](/ci/github-actions) - Free for public repos
+- [CircleCI](/ci/circleci) - Good macOS support
+- [GitLab CI](/ci/gitlab-ci) - Self-hosted option
+
+## Related Actions
+
+- [setup_ci](/actions/setup_ci) - Generic CI setup
+- [setup_circle_ci](/actions/setup_circle_ci) - CircleCI setup
+- [match](/actions/match) - Code signing management
+- [is_ci](/actions/is_ci) - Detect CI environment

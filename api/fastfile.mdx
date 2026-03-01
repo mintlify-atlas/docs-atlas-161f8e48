@@ -1,0 +1,619 @@
+---
+title: "FastFile Class"
+description: "DSL for defining lanes and automation workflows"
+---
+
+The `Fastlane::FastFile` class provides the DSL (Domain-Specific Language) for defining lanes and managing your fastlane automation workflows. When you write a Fastfile, you're using methods provided by this class.
+
+## Overview
+
+The FastFile class:
+- Parses and executes your Fastfile
+- Provides DSL methods for defining lanes
+- Manages platform contexts
+- Handles imports from other Fastfiles
+- Executes actions and manages lane context
+
+## Properties
+
+### runner
+
+The Runner instance that executes lanes and actions.
+
+<ResponseField name="runner" type="Fastlane::Runner">
+  Runner instance managing lane execution
+</ResponseField>
+
+### current_platform
+
+The currently active platform context.
+
+<ResponseField name="current_platform" type="Symbol">
+  Current platform (`:ios`, `:android`, `:mac`) or `nil`
+</ResponseField>
+
+## Constructor
+
+<ParamField path="path" type="String">
+  Path to the Fastfile to load (optional)
+</ParamField>
+
+```ruby
+# Create and parse a Fastfile
+fast_file = Fastlane::FastFile.new("/path/to/Fastfile")
+
+# Create without loading
+fast_file = Fastlane::FastFile.new
+```
+
+## DSL Methods
+
+### lane
+
+Defines a public lane that can be called from the command line.
+
+<ParamField path="lane_name" type="Symbol">
+  Name of the lane
+</ParamField>
+
+<ParamField path="block" type="Block">
+  Code block containing the lane's actions
+</ParamField>
+
+```ruby
+lane :beta do |options|
+  build_app(scheme: options[:scheme])
+  upload_to_testflight
+end
+```
+
+### private_lane
+
+Defines a private lane that can only be called from other lanes.
+
+<ParamField path="lane_name" type="Symbol">
+  Name of the lane
+</ParamField>
+
+<ParamField path="block" type="Block">
+  Code block containing the lane's actions
+</ParamField>
+
+```ruby
+private_lane :setup_signing do
+  match(type: "appstore")
+end
+
+lane :release do
+  setup_signing
+  build_app
+end
+```
+
+### override_lane
+
+Defines a lane that can override existing lanes (useful when importing).
+
+<ParamField path="lane_name" type="Symbol">
+  Name of the lane
+</ParamField>
+
+<ParamField path="block" type="Block">
+  Code block containing the lane's actions
+</ParamField>
+
+```ruby
+# In imported Fastfile
+lane :beta do
+  puts "Original beta lane"
+end
+
+# In main Fastfile
+import "./ImportedFastfile"
+
+override_lane :beta do
+  puts "Overridden beta lane"
+end
+```
+
+### platform
+
+Defines a platform context for grouping related lanes.
+
+<ParamField path="platform_name" type="Symbol">
+  Platform identifier (`:ios`, `:android`, `:mac`)
+</ParamField>
+
+<ParamField path="block" type="Block">
+  Block containing lane definitions for this platform
+</ParamField>
+
+```ruby
+platform :ios do
+  lane :beta do
+    build_app
+    upload_to_testflight
+  end
+end
+
+platform :android do
+  lane :beta do
+    gradle(task: "assemble")
+    upload_to_play_store(track: "beta")
+  end
+end
+```
+
+### desc
+
+Adds a description line to the next lane definition.
+
+<ParamField path="string" type="String">
+  Description text
+</ParamField>
+
+```ruby
+desc "Deploy to TestFlight"
+desc "This will build and upload to TestFlight"
+lane :beta do
+  # ...
+end
+```
+
+## Lifecycle Hooks
+
+### before_all
+
+Executed before any lane runs.
+
+```ruby
+before_all do |lane, options|
+  # This runs before every lane
+  cocoapods
+  ensure_git_status_clean
+end
+
+platform :ios do
+  before_all do |lane, options|
+    # This runs before any iOS lane
+    setup_ci if is_ci
+  end
+end
+```
+
+### after_all
+
+Executed after a lane completes successfully.
+
+```ruby
+after_all do |lane, options|
+  # This runs after a lane succeeds
+  slack(
+    message: "Successfully completed #{lane}",
+    success: true
+  )
+end
+```
+
+### before_each
+
+Executed before each action within lanes.
+
+```ruby
+before_each do |action|
+  puts "Running action: #{action}"
+end
+```
+
+### after_each
+
+Executed after each action within lanes.
+
+```ruby
+after_each do |action|
+  puts "Completed action: #{action}"
+end
+```
+
+### error
+
+Executed when a lane or action fails.
+
+```ruby
+error do |lane, exception, options|
+  slack(
+    message: "Error in #{lane}: #{exception.message}",
+    success: false
+  )
+  
+  # Clean up
+  reset_git_repo(force: true)
+end
+```
+
+## Import Methods
+
+### import
+
+Imports another Fastfile to use its lanes and actions.
+
+<ParamField path="path" type="String">
+  Path to Fastfile to import (relative or absolute)
+</ParamField>
+
+```ruby
+# Import from relative path
+import "./BaseFastfile"
+
+# Import from home directory
+import "~/shared/Fastfile"
+
+# Import from absolute path
+import "/path/to/shared/Fastfile"
+```
+
+The imported Fastfile's:
+- Lanes become available in the importing Fastfile
+- Local actions (in `actions/` directory) are automatically loaded
+
+### import_from_git
+
+Imports a Fastfile from a remote git repository.
+
+<ParamField path="url" type="String" required>
+  Git repository URL
+</ParamField>
+
+<ParamField path="branch" type="String" default="HEAD">
+  Branch to checkout
+</ParamField>
+
+<ParamField path="path" type="String" default="fastlane/Fastfile">
+  Path to Fastfile in the repository
+</ParamField>
+
+<ParamField path="version" type="String">
+  Git tag version to checkout (supports version requirements)
+</ParamField>
+
+<ParamField path="dependencies" type="Array<String>">
+  Additional files to checkout from the repository
+</ParamField>
+
+<ParamField path="cache_path" type="String">
+  Local directory to cache the repository
+</ParamField>
+
+<ParamField path="git_extra_headers" type="Array<String>">
+  Custom HTTP headers for git authentication
+</ParamField>
+
+```ruby
+# Import from GitHub
+import_from_git(
+  url: "https://github.com/company/fastlane-config.git"
+)
+
+# Import specific branch
+import_from_git(
+  url: "https://github.com/company/fastlane-config.git",
+  branch: "main",
+  path: "fastlane/Fastfile"
+)
+
+# Import specific version
+import_from_git(
+  url: "https://github.com/company/fastlane-config.git",
+  version: "~> 1.0.0"
+)
+
+# Import with caching
+import_from_git(
+  url: "https://github.com/company/fastlane-config.git",
+  cache_path: "~/.fastlane-cache"
+)
+
+# Import with dependencies
+import_from_git(
+  url: "https://github.com/company/fastlane-config.git",
+  path: "fastlane/Fastfile",
+  dependencies: ["fastlane/lib/helper.rb"]
+)
+
+# Import from private repo with auth
+import_from_git(
+  url: "https://github.com/company/private-config.git",
+  git_extra_headers: ["Authorization: Basic #{Base64.encode64('token:x-oauth-basic').strip}"]
+)
+```
+
+## Utility Methods
+
+### sh
+
+Execute shell commands.
+
+<ParamField path="command" type="String" required>
+  Command to execute
+</ParamField>
+
+<ParamField path="log" type="Boolean" default="true">
+  Whether to log output
+</ParamField>
+
+<ParamField path="step_name" type="String">
+  Custom name for this step
+</ParamField>
+
+<ParamField path="error_callback" type="Proc">
+  Called if command fails
+</ParamField>
+
+```ruby
+lane :deploy do
+  # Simple command
+  sh "ls -la"
+  
+  # Capture output
+  git_branch = sh("git rev-parse --abbrev-ref HEAD")
+  
+  # With options
+  sh(
+    command: "bundle exec pod install",
+    log: false,
+    step_name: "Installing CocoaPods"
+  )
+  
+  # With error handling
+  sh(
+    command: "risky_command",
+    error_callback: ->(result) {
+      UI.error("Command failed!")
+    }
+  )
+end
+```
+
+### actions_path
+
+Load custom actions from a directory.
+
+<ParamField path="path" type="String">
+  Path to directory containing action files
+</ParamField>
+
+```ruby
+actions_path "./custom_actions"
+actions_path "../shared/fastlane/actions"
+```
+
+### fastlane_require
+
+Require a gem, installing it if necessary.
+
+<ParamField path="gem_name" type="String">
+  Name of the gem to require
+</ParamField>
+
+```ruby
+fastlane_require "json"
+fastlane_require "httparty"
+```
+
+## Method Overrides
+
+FastFile provides special implementations of common Ruby methods:
+
+### say
+
+Speak text out loud (uses the `say` action).
+
+```ruby
+lane :success do
+  say "Deployment complete!"
+  # Or with options
+  say text: "Build successful", voice: "Alex"
+end
+```
+
+### puts
+
+Print output (uses the `puts` action).
+
+```ruby
+lane :info do
+  puts "Current build number: #{get_build_number}"
+end
+```
+
+### test
+
+Switches to the `:test` lane if it exists.
+
+```ruby
+lane :test do
+  run_tests
+end
+
+lane :deploy do
+  test  # Calls the test lane
+  build_app
+end
+```
+
+## Complete Example
+
+```ruby
+# Fastfile
+
+default_platform(:ios)
+
+# Global before_all
+before_all do
+  ensure_git_status_clean
+  cocoapods
+end
+
+# Global error handler
+error do |lane, exception|
+  slack(
+    message: "Error in #{lane}: #{exception.message}",
+    success: false
+  )
+end
+
+platform :ios do
+  # iOS before_all
+  before_all do
+    setup_ci if is_ci
+  end
+  
+  # iOS after_all
+  after_all do |lane|
+    clean_build_artifacts
+  end
+  
+  desc "Run all tests"
+  lane :test do
+    scan(
+      scheme: "MyApp",
+      device: "iPhone 14"
+    )
+  end
+  
+  desc "Build app for testing"
+  private_lane :build do |configuration: "Release"|
+    increment_build_number
+    
+    match(type: "appstore")
+    
+    build_app(
+      scheme: "MyApp",
+      configuration: configuration,
+      export_method: "app-store"
+    )
+  end
+  
+  desc "Deploy to TestFlight"
+  lane :beta do |skip_tests: false|
+    test unless skip_tests
+    
+    build
+    
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+    
+    slack(
+      message: "New beta build uploaded to TestFlight",
+      success: true
+    )
+  end
+  
+  desc "Deploy to App Store"
+  lane :release do
+    test
+    
+    ensure_git_branch(branch: "main")
+    
+    increment_version_number
+    build
+    
+    upload_to_app_store(
+      submit_for_review: true,
+      automatic_release: true,
+      submission_information: {
+        add_id_info_uses_idfa: false
+      }
+    )
+    
+    version = get_version_number
+    sh "git add ."
+    sh "git commit -m 'Release version #{version}'"
+    add_git_tag(tag: version)
+    push_to_git_remote
+  end
+end
+
+platform :android do
+  desc "Deploy to Play Store Beta"
+  lane :beta do
+    gradle(
+      task: "assemble",
+      build_type: "Release"
+    )
+    
+    upload_to_play_store(
+      track: "beta",
+      skip_upload_metadata: true
+    )
+  end
+end
+```
+
+## Advanced Features
+
+### Importing Shared Configuration
+
+```ruby
+# BaseFastfile
+default_platform(:ios)
+
+private_lane :setup_certificates do
+  match(type: "appstore")
+end
+
+lane :build_common do
+  setup_certificates
+  cocoapods
+end
+
+# Fastfile
+import "./BaseFastfile"
+
+lane :beta do
+  build_common  # Use imported lane
+  build_app
+  upload_to_testflight
+end
+```
+
+### Dynamic Lane Execution
+
+```ruby
+lane :deploy do |environment:|
+  case environment
+  when "staging"
+    deploy_staging
+  when "production"
+    deploy_production
+  else
+    UI.user_error!("Unknown environment: #{environment}")
+  end
+end
+
+private_lane :deploy_staging do
+  # Staging deployment
+end
+
+private_lane :deploy_production do
+  # Production deployment
+end
+```
+
+### Conditional Platform Logic
+
+```ruby
+lane :deploy do
+  if is_ci
+    setup_ci
+  end
+  
+  case lane_context[:PLATFORM_NAME]
+  when :ios
+    build_app
+  when :android
+    gradle(task: "assemble")
+  end
+end
+```

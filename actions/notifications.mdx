@@ -1,0 +1,540 @@
+---
+title: Notification Actions
+description: Send build notifications via Slack, email, and other channels
+---
+
+## Overview
+
+fastlane can send notifications to keep your team informed about build status, test results, and deployments. These actions integrate with popular communication platforms.
+
+## Slack Integration
+
+### slack
+
+Send notifications to Slack channels or direct messages.
+
+#### Prerequisites
+
+1. Create a Slack Incoming Webhook:
+   - Go to your Slack workspace settings
+   - Navigate to "Apps" → "Incoming Webhooks"
+   - Create a new webhook and copy the URL
+
+2. Set the webhook URL:
+   ```bash
+   export SLACK_URL="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+   ```
+
+#### Basic Usage
+
+```ruby
+slack(message: "Build successful!")
+```
+
+#### Parameters
+
+<ParamField path="message" type="string">
+  The message to display (supports Slack markup)
+</ParamField>
+
+<ParamField path="pretext" type="string">
+  Optional text above the message attachment
+</ParamField>
+
+<ParamField path="channel" type="string">
+  Channel (#channel) or user (@username) to post to
+</ParamField>
+
+<ParamField path="slack_url" type="string">
+  Slack webhook URL (or use SLACK_URL environment variable)
+</ParamField>
+
+<ParamField path="username" type="string" default="fastlane">
+  Username to display as sender
+</ParamField>
+
+<ParamField path="icon_url" type="string">
+  URL of an image to use as the avatar
+</ParamField>
+
+<ParamField path="icon_emoji" type="string">
+  Emoji to use as avatar (e.g., ":rocket:")
+</ParamField>
+
+<ParamField path="success" type="boolean" default="true">
+  Was this build successful? (affects message color)
+</ParamField>
+
+<ParamField path="payload" type="hash" default="{}">
+  Additional custom fields to include
+</ParamField>
+
+<ParamField path="default_payloads" type="array">
+  Default fields to include: lane, test_result, git_branch, git_author, last_git_commit, last_git_commit_hash
+</ParamField>
+
+<ParamField path="attachment_properties" type="hash" default="{}">
+  Additional Slack attachment properties
+</ParamField>
+
+<ParamField path="fail_on_error" type="boolean" default="true">
+  Should an error sending the notification cause a failure?
+</ParamField>
+
+<ParamField path="link_names" type="boolean" default="false">
+  Find and link channel names and usernames
+</ParamField>
+
+<ParamField path="use_webhook_configured_username_and_icon" type="boolean" default="false">
+  Use webhook's default username and icon settings
+</ParamField>
+
+#### Examples
+
+```ruby
+# Simple message
+slack(message: "App successfully released!")
+
+# Complete configuration
+slack(
+  message: "App successfully released!",
+  channel: "#releases",
+  success: true,
+  payload: {
+    "Build Date" => Time.new.to_s,
+    "Built by" => "Jenkins"
+  },
+  default_payloads: [:git_branch, :git_author],
+  attachment_properties: {
+    thumb_url: "http://example.com/path/to/thumb.png",
+    fields: [{
+      title: "My Field",
+      value: "My Value",
+      short: true
+    }]
+  }
+)
+
+# Error notification
+slack(
+  message: "Build failed!",
+  success: false,
+  channel: "#dev-team"
+)
+
+# Custom icon
+slack(
+  message: "New beta available",
+  icon_emoji: ":rocket:",
+  channel: "#beta-testers"
+)
+
+# Direct message
+slack(
+  message: "Your build is ready",
+  channel: "@username"
+)
+
+# Rich formatting
+slack(
+  message: "*Build #{ENV['BUILD_NUMBER']}* completed\n• Version: #{get_version_number}\n• Branch: #{git_branch}",
+  pretext: "iOS App Build Update"
+)
+```
+
+#### Default Payloads
+
+By default, Slack notifications include:
+- Lane name
+- Test result (Success/Error)
+- Git branch
+- Git author
+- Last git commit message
+- Last git commit hash
+
+Customize with `default_payloads`:
+
+```ruby
+slack(
+  message: "Build complete",
+  default_payloads: [:git_branch, :git_author]
+  # Only include branch and author
+)
+
+# Suppress all defaults
+slack(
+  message: "Build complete",
+  default_payloads: []
+)
+```
+
+---
+
+## macOS Notifications
+
+### notification
+
+Display a macOS notification banner.
+
+<Note>
+This action only works on macOS and requires the `terminal-notifier` gem.
+</Note>
+
+#### Basic Usage
+
+```ruby
+notification(
+  subtitle: "Finished Building",
+  message: "Ready to upload..."
+)
+```
+
+#### Parameters
+
+<ParamField path="title" type="string" default="fastlane">
+  The notification title
+</ParamField>
+
+<ParamField path="subtitle" type="string">
+  The notification subtitle
+</ParamField>
+
+<ParamField path="message" type="string" required>
+  The notification message
+</ParamField>
+
+<ParamField path="sound" type="string">
+  Sound to play (from Sound Preferences)
+</ParamField>
+
+<ParamField path="activate" type="string">
+  Bundle identifier of app to open when clicked
+</ParamField>
+
+<ParamField path="app_icon" type="string">
+  URL of image to display instead of app icon
+</ParamField>
+
+<ParamField path="content_image" type="string">
+  URL of image to attach to notification
+</ParamField>
+
+<ParamField path="open" type="string">
+  URL to open when notification is clicked
+</ParamField>
+
+<ParamField path="execute" type="string">
+  Shell command to run when clicked
+</ParamField>
+
+#### Examples
+
+```ruby
+# Basic notification
+notification(
+  subtitle: "Build Complete",
+  message: "MyApp v1.0 ready"
+)
+
+# With sound
+notification(
+  subtitle: "Tests Passed",
+  message: "All 247 tests passed",
+  sound: "Glass"
+)
+
+# Open URL when clicked
+notification(
+  subtitle: "Build Uploaded",
+  message: "TestFlight build is ready",
+  open: "https://appstoreconnect.apple.com"
+)
+```
+
+#### Supported Platforms
+
+- macOS only
+
+---
+
+## Other Notification Services
+
+### chatwork
+
+Send notifications to Chatwork.
+
+#### Basic Usage
+
+```ruby
+chatwork(
+  api_token: "YOUR_API_TOKEN",
+  room_id: "12345",
+  message: "Build successful!"
+)
+```
+
+#### Parameters
+
+<ParamField path="api_token" type="string" required>
+  Chatwork API token
+</ParamField>
+
+<ParamField path="room_id" type="string" required>
+  Chatwork room ID
+</ParamField>
+
+<ParamField path="message" type="string" required>
+  Message to send
+</ParamField>
+
+<ParamField path="success" type="boolean" default="true">
+  Indicates success or failure
+</ParamField>
+
+---
+
+### mailgun
+
+Send email notifications via Mailgun.
+
+#### Basic Usage
+
+```ruby
+mailgun(
+  to: "team@example.com",
+  message: "Build completed successfully"
+)
+```
+
+---
+
+## Complete Notification Workflows
+
+### Success Notification
+
+```ruby
+lane :release do
+  begin
+    # Build and release
+    build_app(scheme: "MyApp")
+    upload_to_app_store
+    
+    # Success notification
+    slack(
+      message: "Successfully released version #{get_version_number}!",
+      success: true,
+      channel: "#releases",
+      payload: {
+        "Version" => get_version_number,
+        "Build" => get_build_number,
+        "Platform" => "iOS"
+      }
+    )
+    
+    notification(
+      subtitle: "Release Complete",
+      message: "#{get_version_number} is now live!"
+    )
+  rescue => exception
+    # Error notification
+    slack(
+      message: "Release failed: #{exception.message}",
+      success: false,
+      channel: "#releases"
+    )
+    
+    raise exception
+  end
+end
+```
+
+### Test Results Notification
+
+```ruby
+lane :test do
+  begin
+    results = run_tests(
+      scheme: "MyApp",
+      code_coverage: true
+    )
+    
+    slack(
+      message: "Tests passed!",
+      success: true,
+      payload: {
+        "Tests" => results[:number_of_tests],
+        "Failures" => results[:number_of_failures]
+      }
+    )
+  rescue => exception
+    slack(
+      message: "Tests failed!",
+      success: false,
+      attachment_properties: {
+        fields: [{
+          title: "Error",
+          value: exception.message,
+          short: false
+        }]
+      }
+    )
+    
+    raise exception
+  end
+end
+```
+
+### Multi-Channel Notifications
+
+```ruby
+lane :notify_beta do
+  version = get_version_number
+  build = get_build_number
+  
+  # Notify team channel
+  slack(
+    message: "New beta build #{version} (#{build}) available!",
+    channel: "#team"
+  )
+  
+  # Notify beta testers channel
+  slack(
+    message: "Beta #{version} is ready for testing",
+    channel: "#beta-testers",
+    payload: {
+      "TestFlight" => "Check your email for the invite"
+    }
+  )
+  
+  # Desktop notification
+  notification(
+    subtitle: "Beta Released",
+    message: "Version #{version} uploaded to TestFlight"
+  )
+end
+```
+
+### Conditional Notifications
+
+```ruby
+lane :build do |options|
+  build_app(scheme: "MyApp")
+  
+  # Only notify on CI
+  if ENV['CI']
+    slack(
+      message: "CI Build #{ENV['BUILD_NUMBER']} complete",
+      channel: "#ci-builds"
+    )
+  end
+  
+  # Only notify on release builds
+  if options[:release]
+    slack(
+      message: "Release build ready for upload",
+      channel: "#releases"
+    )
+  end
+end
+```
+
+### Rich Slack Notifications
+
+```ruby
+lane :notify_release do
+  version = get_version_number
+  build = get_build_number
+  
+  slack(
+    message: "New Release Available",
+    pretext: "iOS App Update",
+    success: true,
+    payload: {
+      "Version" => version,
+      "Build" => build,
+      "Platform" => "iOS",
+      "Submitted" => Time.now.strftime("%Y-%m-%d %H:%M")
+    },
+    default_payloads: [:git_branch, :git_author, :last_git_commit],
+    attachment_properties: {
+      thumb_url: "https://example.com/app-icon.png",
+      fields: [
+        {
+          title: "App Store",
+          value: "<https://apps.apple.com/app/id123456789|View in App Store>",
+          short: true
+        },
+        {
+          title: "Status",
+          value: "Waiting for Review",
+          short: true
+        }
+      ]
+    }
+  )
+end
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use environment variables for credentials">
+    Never hardcode webhook URLs or API keys:
+    
+    ```ruby
+    # In .env file
+    SLACK_URL=https://hooks.slack.com/services/...
+    
+    # In Fastfile
+    slack(message: "Build complete")
+    # Uses SLACK_URL automatically
+    ```
+  </Accordion>
+  
+  <Accordion title="Include relevant context">
+    Add useful information to notifications:
+    
+    ```ruby
+    slack(
+      message: "Build complete",
+      payload: {
+        "Version" => get_version_number,
+        "Duration" => "5m 23s",
+        "Commit" => last_git_commit[:message]
+      }
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Use different channels for different events">
+    Separate channels help manage notification noise:
+    
+    ```ruby
+    # Releases to #releases
+    slack(message: "Released", channel: "#releases")
+    
+    # Test failures to #tests
+    slack(message: "Tests failed", channel: "#tests")
+    
+    # CI builds to #ci
+    slack(message: "Build done", channel: "#ci")
+    ```
+  </Accordion>
+  
+  <Accordion title="Handle notification failures gracefully">
+    Don't fail builds due to notification errors:
+    
+    ```ruby
+    slack(
+      message: "Build complete",
+      fail_on_error: false  # Continue even if Slack fails
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Actions
+
+- [build_app](/actions/building#build_app) - Build notifications
+- [run_tests](/actions/testing#run_tests) - Test result notifications
+- [upload_to_testflight](/actions/app-store#upload_to_testflight) - Release notifications

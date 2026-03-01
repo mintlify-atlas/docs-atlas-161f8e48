@@ -1,0 +1,438 @@
+---
+title: "Lane Class"
+description: "Represents a fastlane lane for organizing automation workflows"
+---
+
+The `Fastlane::Lane` class represents a lane in your Fastfile. Lanes are the building blocks of fastlane automation workflows.
+
+## Overview
+
+A lane is a named workflow that executes a series of actions. Lanes are defined in your Fastfile and can be called from the command line or from other lanes.
+
+```ruby
+lane :beta do
+  build_app
+  upload_to_testflight
+end
+```
+
+## Properties
+
+### platform
+
+The platform this lane belongs to (`:ios`, `:android`, `:mac`, or `nil` for cross-platform lanes).
+
+<ResponseField name="platform" type="Symbol">
+  Platform identifier or `nil` for platform-independent lanes
+</ResponseField>
+
+```ruby
+lane = Lane.new(platform: :ios, name: :beta, description: [], block: proc {})
+lane.platform # => :ios
+```
+
+### name
+
+The name of the lane as a symbol.
+
+<ResponseField name="name" type="Symbol">
+  Lane identifier used to invoke the lane
+</ResponseField>
+
+```ruby
+lane.name # => :beta
+```
+
+### description
+
+Array of description lines for the lane.
+
+<ResponseField name="description" type="Array<String>">
+  Each element is one line of description text
+</ResponseField>
+
+```ruby
+desc "Build and upload to TestFlight"
+desc "This lane is used for beta releases"
+lane :beta do
+  # ...
+end
+
+# lane.description => ["Build and upload to TestFlight", "This lane is used for beta releases"]
+```
+
+### block
+
+The code block that executes when the lane runs.
+
+<ResponseField name="block" type="Proc">
+  Executable code block containing the lane's actions
+</ResponseField>
+
+### is_private
+
+Whether the lane is private and cannot be called from the CLI.
+
+<ResponseField name="is_private" type="Boolean">
+  `true` if the lane is private, `false` otherwise
+</ResponseField>
+
+```ruby
+private_lane :helper_lane do
+  # This lane can only be called from other lanes
+end
+
+# lane.is_private => true
+```
+
+## Constructor
+
+Creates a new Lane instance.
+
+<ParamField path="platform" type="Symbol">
+  The platform (`:ios`, `:android`, `:mac`) or `nil`
+</ParamField>
+
+<ParamField path="name" type="Symbol">
+  Lane name (must be a symbol, cannot contain spaces)
+</ParamField>
+
+<ParamField path="description" type="Array<String>">
+  Array of description lines
+</ParamField>
+
+<ParamField path="block" type="Proc">
+  Code block to execute
+</ParamField>
+
+<ParamField path="is_private" type="Boolean" default="false">
+  Whether lane is private
+</ParamField>
+
+```ruby
+lane = Fastlane::Lane.new(
+  platform: :ios,
+  name: :beta,
+  description: ["Deploy to TestFlight"],
+  block: proc { |options|
+    build_app(scheme: options[:scheme])
+    upload_to_testflight
+  },
+  is_private: false
+)
+```
+
+## Instance Methods
+
+### call
+
+Executes the lane with the given parameters.
+
+<ParamField path="parameters" type="Hash">
+  Parameters to pass to the lane block
+</ParamField>
+
+```ruby
+lane = Lane.new(
+  platform: :ios,
+  name: :build,
+  description: ["Build app"],
+  block: proc { |options|
+    build_app(scheme: options[:scheme])
+  }
+)
+
+lane.call({ scheme: "MyApp" })
+```
+
+### pretty_name
+
+Returns a formatted name including platform if present.
+
+```ruby
+lane = Lane.new(platform: :ios, name: :beta, description: [], block: proc {})
+lane.pretty_name # => "ios beta"
+
+lane = Lane.new(platform: nil, name: :test, description: [], block: proc {})
+lane.pretty_name # => "test"
+```
+
+<ResponseField name="return" type="String">
+  Formatted lane name with platform prefix if applicable
+</ResponseField>
+
+## Class Methods
+
+### verify_lane_name
+
+Validates that a lane name is acceptable.
+
+<ParamField path="name" type="Symbol">
+  The lane name to validate
+</ParamField>
+
+```ruby
+Lane.verify_lane_name(:my_lane)  # OK
+Lane.verify_lane_name(:run)      # Error: reserved name
+```
+
+This method checks:
+- Lane name is not in the deny list (reserved names)
+- Lane name doesn't conflict with fastlane tool names
+- Lane name doesn't conflict with existing action names
+
+### deny_list
+
+Returns array of reserved lane names that cannot be used.
+
+```ruby
+Lane.deny_list
+# => ["run", "init", "new_action", "lanes", "list", "docs", "action", 
+#     "actions", "enable_auto_complete", "new_plugin", "add_plugin", 
+#     "install_plugins", "update_plugins", "search_plugins", "help", 
+#     "env", "update_fastlane"]
+```
+
+<ResponseField name="return" type="Array<String>">
+  List of forbidden lane names
+</ResponseField>
+
+### gray_list
+
+Returns array of lane names that are allowed but not recommended (fastlane tool names).
+
+```ruby
+Lane.gray_list
+# => [:fastlane, :pilot, :spaceship, :produce, :deliver, :frameit, :pem, 
+#     :snapshot, :screengrab, :supply, :cert, :sigh, :match, :scan, :gym, 
+#     :precheck, :trainer]
+```
+
+<ResponseField name="return" type="Array<Symbol>">
+  List of tool names that can be used as lane names but will show a warning
+</ResponseField>
+
+## Lane Parameters
+
+Lanes can accept parameters in two ways:
+
+### Hash Parameters
+
+Traditional approach using a hash:
+
+```ruby
+lane :build do |options|
+  scheme = options[:scheme] || "MyApp"
+  configuration = options[:configuration] || "Release"
+  
+  build_app(
+    scheme: scheme,
+    configuration: configuration
+  )
+end
+
+# Usage:
+# fastlane build scheme:MyApp configuration:Debug
+```
+
+### Keyword Parameters
+
+Modern Ruby keyword parameters:
+
+```ruby
+lane :build do |scheme:, configuration: "Release"|
+  build_app(
+    scheme: scheme,
+    configuration: configuration
+  )
+end
+
+# Usage:
+# fastlane build scheme:MyApp configuration:Debug
+```
+
+## Platform-Specific Lanes
+
+Lanes can be organized by platform:
+
+```ruby
+platform :ios do
+  lane :beta do
+    build_app
+    upload_to_testflight
+  end
+  
+  lane :release do
+    build_app
+    upload_to_app_store
+  end
+end
+
+platform :android do
+  lane :beta do
+    gradle(task: "assemble")
+    upload_to_play_store(track: "beta")
+  end
+  
+  lane :release do
+    gradle(task: "assemble")
+    upload_to_play_store
+  end
+end
+```
+
+Call platform-specific lanes:
+
+```bash
+fastlane ios beta
+fastlane android beta
+```
+
+## Private Lanes
+
+Private lanes can only be called from other lanes, not from the CLI:
+
+```ruby
+private_lane :prepare_environment do
+  cocoapods
+  setup_ci
+end
+
+lane :beta do
+  prepare_environment
+  build_app
+  upload_to_testflight
+end
+```
+
+## Calling Other Lanes
+
+You can call other lanes from within a lane:
+
+```ruby
+lane :build_and_test do
+  build_app
+  run_tests
+end
+
+lane :deploy do
+  # Call another lane
+  build_and_test
+  
+  # Upload
+  upload_to_testflight
+end
+```
+
+## Lane Context
+
+Lanes share a context where actions can store and retrieve values:
+
+```ruby
+lane :build do
+  build_app(scheme: "MyApp")
+  
+  # IPA_OUTPUT_PATH is automatically set by build_app
+  ipa_path = lane_context[SharedValues::IPA_OUTPUT_PATH]
+  puts "Built IPA at: #{ipa_path}"
+end
+```
+
+## Example: Complete Fastfile
+
+```ruby
+default_platform(:ios)
+
+platform :ios do
+  desc "Run tests"
+  lane :test do
+    run_tests(scheme: "MyApp")
+  end
+  
+  desc "Build for testing"
+  private_lane :build do |configuration: "Release"|
+    build_app(
+      scheme: "MyApp",
+      configuration: configuration,
+      export_method: "ad-hoc"
+    )
+  end
+  
+  desc "Deploy to TestFlight"
+  lane :beta do |options|
+    # Run tests first
+    test
+    
+    # Increment build number
+    increment_build_number
+    
+    # Build app
+    build
+    
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: options[:skip_waiting] || false
+    )
+    
+    # Notify team
+    slack(
+      message: "New beta build available on TestFlight!",
+      success: true
+    )
+  end
+  
+  desc "Deploy to App Store"
+  lane :release do
+    # Ensure we're on master branch
+    ensure_git_branch(branch: "main")
+    ensure_git_status_clean
+    
+    # Run tests
+    test
+    
+    # Bump version
+    increment_version_number
+    increment_build_number
+    
+    # Build
+    build(configuration: "Release")
+    
+    # Upload
+    upload_to_app_store(
+      submit_for_review: false,
+      automatic_release: false
+    )
+    
+    # Tag release
+    add_git_tag
+    push_to_git_remote
+  end
+end
+```
+
+## Error Handling
+
+Lane names are validated:
+
+- Must be symbols (`:my_lane`)
+- Cannot contain spaces
+- Cannot be reserved words (see `deny_list`)
+- Should not conflict with tool names (see `gray_list`)
+- Should not conflict with action names
+
+```ruby
+# Valid
+lane :my_beta_lane do
+  # ...
+end
+
+# Invalid - contains space
+lane "my beta lane" do  # Error!
+  # ...
+end
+
+# Invalid - reserved name
+lane :run do  # Error!
+  # ...
+end
+```

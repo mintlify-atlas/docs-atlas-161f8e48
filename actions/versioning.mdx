@@ -1,0 +1,478 @@
+---
+title: Versioning Actions
+description: Manage version numbers and build numbers for your apps
+---
+
+## Overview
+
+fastlane provides actions to manage version numbers and build numbers for both iOS and Android apps. These actions help you maintain consistent versioning across releases.
+
+## iOS/macOS Versioning
+
+### increment_build_number
+
+Increment the build number of your Xcode project.
+
+#### Prerequisites
+
+Your project must have Apple Generic Versioning enabled. See [Apple's documentation](https://developer.apple.com/library/content/qa/qa1827/_index.html) for setup instructions.
+
+#### Basic Usage
+
+```ruby
+increment_build_number
+```
+
+#### Parameters
+
+<ParamField path="build_number" type="string or integer">
+  Set a specific build number instead of incrementing
+</ParamField>
+
+<ParamField path="skip_info_plist" type="boolean" default="false">
+  Don't update Info.plist files
+</ParamField>
+
+<ParamField path="xcodeproj" type="string">
+  Path to your Xcode project (if not in root directory)
+</ParamField>
+
+#### Return Value
+
+Returns the new build number as a string.
+
+#### Shared Values
+
+- `BUILD_NUMBER` - The new build number
+
+#### Examples
+
+```ruby
+# Automatically increment by one
+increment_build_number
+
+# Set a specific build number
+increment_build_number(
+  build_number: "75"
+)
+
+# Complete configuration
+increment_build_number(
+  build_number: 75,
+  xcodeproj: "./path/to/MyApp.xcodeproj"
+)
+
+# Get the new build number
+build_number = increment_build_number
+UI.message("New build number: #{build_number}")
+```
+
+---
+
+### get_build_number
+
+Get the current build number from your Xcode project.
+
+#### Basic Usage
+
+```ruby
+build_number = get_build_number
+```
+
+#### Parameters
+
+<ParamField path="xcodeproj" type="string">
+  Path to your Xcode project
+</ParamField>
+
+#### Examples
+
+```ruby
+# Get current build number
+build_number = get_build_number
+UI.message("Current build: #{build_number}")
+
+# From specific project
+build_number = get_build_number(
+  xcodeproj: "./MyApp.xcodeproj"
+)
+```
+
+---
+
+### increment_version_number
+
+Increment the version number of your Xcode project.
+
+#### Basic Usage
+
+```ruby
+increment_version_number
+```
+
+#### Parameters
+
+<ParamField path="bump_type" type="string" default="bump">
+  Type of version bump: bump, patch, minor, or major
+</ParamField>
+
+<ParamField path="version_number" type="string">
+  Set a specific version number
+</ParamField>
+
+<ParamField path="xcodeproj" type="string">
+  Path to your Xcode project
+</ParamField>
+
+#### Return Value
+
+Returns the new version number as a string.
+
+#### Shared Values
+
+- `VERSION_NUMBER` - The new version number
+
+#### Examples
+
+```ruby
+# Automatically increment (bump last component)
+increment_version_number
+
+# Increment patch version (1.2.3 -> 1.2.4)
+increment_version_number(
+  bump_type: "patch"
+)
+
+# Increment minor version (1.2.3 -> 1.3.0)
+increment_version_number(
+  bump_type: "minor"
+)
+
+# Increment major version (1.2.3 -> 2.0.0)
+increment_version_number(
+  bump_type: "major"
+)
+
+# Set a specific version
+increment_version_number(
+  version_number: "2.1.1"
+)
+
+# Complete configuration
+increment_version_number(
+  version_number: "2.1.1",
+  xcodeproj: "./path/to/MyApp.xcodeproj"
+)
+
+# Get the new version
+version = increment_version_number
+UI.message("New version: #{version}")
+```
+
+#### Version Format
+
+Versions must follow the format:
+- `A` (e.g., "1")
+- `A.B` (e.g., "1.2")
+- `A.B.C` (e.g., "1.2.3")
+
+---
+
+### get_version_number
+
+Get the current version number from your Xcode project.
+
+#### Basic Usage
+
+```ruby
+version = get_version_number
+```
+
+#### Parameters
+
+<ParamField path="xcodeproj" type="string">
+  Path to Xcode project or containing directory
+</ParamField>
+
+<ParamField path="target" type="string">
+  Target name (required if multiple non-test targets)
+</ParamField>
+
+<ParamField path="configuration" type="string">
+  Build configuration name
+</ParamField>
+
+#### Return Value
+
+Returns the version number as a string.
+
+#### Shared Values
+
+- `VERSION_NUMBER` - The version number
+
+#### Examples
+
+```ruby
+# Get version from project
+version = get_version_number(xcodeproj: "Project.xcodeproj")
+
+# From specific target
+version = get_version_number(
+  xcodeproj: "Project.xcodeproj",
+  target: "App"
+)
+
+# Use in other actions
+version = get_version_number
+UI.message("Current version: #{version}")
+```
+
+---
+
+## Android Versioning
+
+For Android, version management is typically done through Gradle properties.
+
+### Using Gradle Properties
+
+```ruby
+# Increment version code
+increment_version_code(
+  gradle_file_path: "./app/build.gradle"
+)
+
+# Set version code and name via gradle
+gradle(
+  task: "assemble",
+  build_type: "Release",
+  properties: {
+    "android.injected.version.code" => 100,
+    "android.injected.version.name" => "1.0.0"
+  }
+)
+```
+
+### Using version.properties File
+
+Many Android projects use a `version.properties` file:
+
+```ruby
+# Read version.properties
+version_code = File.read("../version.properties").match(/VERSION_CODE=(\d+)/)[1].to_i
+version_name = File.read("../version.properties").match(/VERSION_NAME=([\d.]+)/)[1]
+
+# Increment
+version_code += 1
+
+# Write back
+File.write("../version.properties", "VERSION_CODE=#{version_code}\nVERSION_NAME=#{version_name}")
+
+# Use in gradle
+gradle(
+  task: "assemble",
+  build_type: "Release"
+)
+```
+
+---
+
+## Complete Versioning Workflows
+
+### iOS Release Workflow
+
+```ruby
+lane :release do
+  # Ensure clean git state
+  ensure_git_status_clean
+  
+  # Get current version
+  version = get_version_number
+  build = get_build_number
+  
+  UI.message("Current version: #{version} (#{build})")
+  
+  # Increment build number
+  increment_build_number
+  
+  # Get new build number
+  new_build = get_build_number
+  
+  # Build app
+  build_app(scheme: "MyApp")
+  
+  # Upload to App Store
+  upload_to_app_store
+  
+  # Commit version bump
+  commit_version_bump(
+    message: "Version Bump to #{version} (#{new_build})"
+  )
+  
+  # Create git tag
+  add_git_tag(
+    tag: "v#{version}-#{new_build}"
+  )
+  
+  # Push to remote
+  push_to_git_remote
+end
+```
+
+### iOS Version Update Workflow
+
+```ruby
+lane :bump_version do |options|
+  # Increment version based on type
+  bump_type = options[:type] || "patch"
+  
+  new_version = increment_version_number(
+    bump_type: bump_type
+  )
+  
+  # Reset build number to 1 for new version
+  increment_build_number(
+    build_number: 1
+  )
+  
+  UI.success("Updated to version #{new_version} (1)")
+  
+  # Commit changes
+  commit_version_bump(
+    message: "Bump version to #{new_version}"
+  )
+end
+```
+
+### Android Version Workflow
+
+```ruby
+lane :bump_version do |options|
+  # Read current version
+  gradle_file = File.read("../app/build.gradle")
+  version_code = gradle_file.match(/versionCode (\d+)/)[1].to_i
+  version_name = gradle_file.match(/versionName "([^"]+)"/)[1]
+  
+  # Increment version code
+  new_version_code = version_code + 1
+  
+  # Update build.gradle
+  gradle_file.gsub!(/versionCode \d+/, "versionCode #{new_version_code}")
+  
+  if options[:version_name]
+    gradle_file.gsub!(/versionName "[^"]+"/, "versionName \"#{options[:version_name]}\"")
+  end
+  
+  File.write("../app/build.gradle", gradle_file)
+  
+  UI.success("Updated to version #{options[:version_name] || version_name} (#{new_version_code})")
+  
+  # Commit
+  git_commit(
+    path: "./app/build.gradle",
+    message: "Bump version to #{new_version_code}"
+  )
+end
+```
+
+### Semantic Versioning Workflow
+
+```ruby
+lane :version do |options|
+  case options[:bump]
+  when "major"
+    increment_version_number(bump_type: "major")
+    increment_build_number(build_number: 1)
+  when "minor"
+    increment_version_number(bump_type: "minor")
+    increment_build_number(build_number: 1)
+  when "patch"
+    increment_version_number(bump_type: "patch")
+    increment_build_number(build_number: 1)
+  else
+    # Just increment build number
+    increment_build_number
+  end
+  
+  version = get_version_number
+  build = get_build_number
+  
+  UI.success("Version: #{version} (#{build})")
+end
+```
+
+### TestFlight Build Number Management
+
+```ruby
+lane :beta do
+  # Get latest TestFlight build number
+  latest_testflight_build = latest_testflight_build_number(
+    app_identifier: "com.example.app"
+  )
+  
+  # Set build number to latest + 1
+  increment_build_number(
+    build_number: latest_testflight_build + 1
+  )
+  
+  # Build and upload
+  build_app(scheme: "MyApp")
+  upload_to_testflight
+end
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Commit version bumps">
+    Always commit version changes to git:
+    
+    ```ruby
+    increment_build_number
+    commit_version_bump(
+      message: "Build number bump",
+      xcodeproj: "./MyApp.xcodeproj"
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Tag releases">
+    Create git tags for releases:
+    
+    ```ruby
+    version = get_version_number
+    build = get_build_number
+    add_git_tag(tag: "v#{version}-#{build}")
+    ```
+  </Accordion>
+  
+  <Accordion title="Follow semantic versioning">
+    Use semantic versioning for clarity:
+    
+    ```ruby
+    # Major changes: 1.0.0 -> 2.0.0
+    increment_version_number(bump_type: "major")
+    
+    # New features: 1.0.0 -> 1.1.0
+    increment_version_number(bump_type: "minor")
+    
+    # Bug fixes: 1.0.0 -> 1.0.1
+    increment_version_number(bump_type: "patch")
+    ```
+  </Accordion>
+  
+  <Accordion title="Reset build numbers on version changes">
+    Start at build 1 for new versions:
+    
+    ```ruby
+    increment_version_number(bump_type: "minor")
+    increment_build_number(build_number: 1)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Actions
+
+- [commit_version_bump](/actions/project-management) - Commit version changes
+- [add_git_tag](/actions/project-management) - Create git tags
+- [build_app](/actions/building#build_app) - Build with version
+- [latest_testflight_build_number](/actions/app-store) - Get TestFlight build number

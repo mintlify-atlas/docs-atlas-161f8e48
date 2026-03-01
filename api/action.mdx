@@ -1,0 +1,525 @@
+---
+title: "Action Class"
+description: "Base class for creating custom fastlane actions"
+---
+
+The `Fastlane::Action` class is the base class for all fastlane actions. Extend this class to create custom actions that integrate seamlessly with fastlane.
+
+## Creating Custom Actions
+
+To create a custom action, create a class that inherits from `Fastlane::Action` and implement the required methods:
+
+```ruby
+module Fastlane
+  module Actions
+    class MyCustomAction < Action
+      def self.run(params)
+        # Your action implementation
+        UI.message("Running custom action with: #{params[:message]}")
+      end
+
+      def self.description
+        "A brief description of what this action does"
+      end
+
+      def self.available_options
+        [
+          FastlaneCore::ConfigItem.new(
+            key: :message,
+            env_name: "MY_CUSTOM_MESSAGE",
+            description: "The message to display",
+            optional: false,
+            type: String
+          )
+        ]
+      end
+
+      def self.is_supported?(platform)
+        [:ios, :android].include?(platform)
+      end
+
+      def self.category
+        :misc
+      end
+    end
+  end
+end
+```
+
+## Required Methods
+
+### run
+
+The main method that executes the action's functionality.
+
+<ParamField path="params" type="Hash">
+  Hash of parameters passed to the action, validated against `available_options`
+</ParamField>
+
+```ruby
+def self.run(params)
+  api_key = params[:api_key]
+  message = params[:message]
+  
+  # Perform action logic
+  result = perform_api_call(api_key, message)
+  
+  # Store result in lane context
+  Actions.lane_context[SharedValues::MY_RESULT] = result
+  
+  # Return value accessible to other actions
+  return result
+end
+```
+
+<ResponseField name="return" type="varies">
+  Return value is accessible via the action name in the lane and stored in the lane context
+</ResponseField>
+
+### is_supported?
+
+Defines which platforms this action supports.
+
+<ParamField path="platform" type="Symbol">
+  The platform to check (`:ios`, `:android`, `:mac`)
+</ParamField>
+
+```ruby
+def self.is_supported?(platform)
+  [:ios, :mac].include?(platform)
+end
+```
+
+<ResponseField name="return" type="Boolean">
+  `true` if the action supports the given platform, `false` otherwise
+</ResponseField>
+
+## Optional Methods
+
+### description
+
+Provides a short description of the action (1-2 sentences).
+
+```ruby
+def self.description
+  "Upload your app to a custom distribution service"
+end
+```
+
+<ResponseField name="return" type="String">
+  Brief description shown in action lists and help text
+</ResponseField>
+
+### details
+
+Provides detailed information about the action.
+
+```ruby
+def self.details
+  "This action uploads your IPA or APK to a custom distribution service. " \
+  "It handles authentication, file upload, and notification of team members."
+end
+```
+
+<ResponseField name="return" type="String">
+  Extended description with more implementation details
+</ResponseField>
+
+### available_options
+
+Defines the parameters this action accepts.
+
+```ruby
+def self.available_options
+  [
+    FastlaneCore::ConfigItem.new(
+      key: :api_key,
+      env_name: "CUSTOM_SERVICE_API_KEY",
+      description: "API key for authentication",
+      sensitive: true,
+      optional: false,
+      type: String
+    ),
+    FastlaneCore::ConfigItem.new(
+      key: :ipa_path,
+      env_name: "CUSTOM_SERVICE_IPA_PATH",
+      description: "Path to IPA file",
+      optional: true,
+      default_value: Actions.lane_context[SharedValues::IPA_OUTPUT_PATH],
+      type: String,
+      verify_block: proc do |value|
+        UI.user_error!("IPA file not found at path '#{value}'") unless File.exist?(value)
+      end
+    ),
+    FastlaneCore::ConfigItem.new(
+      key: :notify_team,
+      description: "Send notification to team members",
+      optional: true,
+      default_value: true,
+      type: Boolean
+    )
+  ]
+end
+```
+
+<ResponseField name="return" type="Array<FastlaneCore::ConfigItem>">
+  Array of configuration items defining action parameters
+</ResponseField>
+
+### output
+
+Defines values this action stores in the shared lane context.
+
+```ruby
+def self.output
+  [
+    ['CUSTOM_SERVICE_DOWNLOAD_URL', 'URL where the app can be downloaded'],
+    ['CUSTOM_SERVICE_BUILD_ID', 'Unique identifier for this build']
+  ]
+end
+```
+
+<ResponseField name="return" type="Array<Array>">
+  Array of `[key, description]` pairs for shared values
+</ResponseField>
+
+### return_type
+
+Specifies the type of value returned by the action.
+
+```ruby
+def self.return_type
+  :string
+end
+```
+
+<ResponseField name="return" type="Symbol">
+  One of: `:string`, `:array_of_strings`, `:hash_of_strings`, `:hash`, `:bool`, `:int`
+</ResponseField>
+
+### return_value
+
+Describes what the action returns.
+
+```ruby
+def self.return_value
+  "The download URL for the uploaded build"
+end
+```
+
+<ResponseField name="return" type="String">
+  Human-readable description of the return value
+</ResponseField>
+
+### sample_return_value
+
+Provides an example return value for documentation.
+
+```ruby
+def self.sample_return_value
+  "https://custom-service.com/apps/123456/download"
+end
+```
+
+### author / authors
+
+Specifies the action's author(s).
+
+```ruby
+def self.author
+  "your_github_username"
+end
+
+# Or for multiple authors:
+def self.authors
+  ["author1", "author2"]
+end
+```
+
+### example_code
+
+Provides example usage code.
+
+```ruby
+def self.example_code
+  [
+    'my_custom_action(api_key: "abc123")',
+    'my_custom_action(
+      api_key: "abc123",
+      ipa_path: "./MyApp.ipa",
+      notify_team: true
+    )'
+  ]
+end
+```
+
+<ResponseField name="return" type="Array<String>">
+  Array of code examples as strings
+</ResponseField>
+
+### category
+
+Categorizes the action for documentation.
+
+```ruby
+def self.category
+  :beta
+end
+```
+
+<ResponseField name="return" type="Symbol">
+  Category from `AVAILABLE_CATEGORIES`
+</ResponseField>
+
+## Available Categories
+
+Actions can be categorized using these constants:
+
+- `:testing` - Testing and test automation
+- `:building` - Building and compiling
+- `:screenshots` - Screenshot generation
+- `:project` - Project configuration
+- `:code_signing` - Code signing and certificates
+- `:documentation` - Documentation generation
+- `:beta` - Beta deployment and distribution
+- `:push` - Push notifications
+- `:production` - Production deployment
+- `:source_control` - Git and version control
+- `:notifications` - Notifications and alerts
+- `:app_store_connect` - App Store Connect operations
+- `:misc` - Miscellaneous
+- `:deprecated` - Deprecated actions
+
+## Helper Methods
+
+### sh
+
+Execute shell commands from your action.
+
+```ruby
+def self.run(params)
+  sh("git status")
+  result = sh("git rev-parse HEAD")
+end
+```
+
+### other_action
+
+Call other fastlane actions from within your action.
+
+```ruby
+def self.run(params)
+  # Call another action
+  other_action.build_app(scheme: "MyApp")
+  
+  # Access its output
+  ipa_path = other_action.lane_context[SharedValues::IPA_OUTPUT_PATH]
+end
+```
+
+### lane_context
+
+Access the shared lane context.
+
+```ruby
+def self.run(params)
+  # Read from lane context
+  build_number = Actions.lane_context[SharedValues::BUILD_NUMBER]
+  
+  # Write to lane context
+  Actions.lane_context[SharedValues::MY_VALUE] = "result"
+end
+```
+
+### action_name
+
+Returns the snake_case name of the action.
+
+```ruby
+class MyCustomAction < Action
+  def self.action_name
+    # Returns "my_custom"
+    super
+  end
+end
+```
+
+### step_text
+
+Customizes the text shown when the action runs.
+
+```ruby
+def self.step_text(params)
+  "Uploading to custom service"
+end
+```
+
+### deprecated_notes
+
+Provides deprecation information if action is deprecated.
+
+```ruby
+def self.deprecated_notes
+  "This action is deprecated. Use 'new_action' instead."
+end
+```
+
+## Class Variables
+
+### runner
+
+Access the current runner instance.
+
+```ruby
+def self.run(params)
+  current_platform = self.runner.current_platform
+end
+```
+
+## Complete Example
+
+Here's a complete custom action implementation:
+
+```ruby
+module Fastlane
+  module Actions
+    module SharedValues
+      UPLOAD_SERVICE_URL = :UPLOAD_SERVICE_URL
+    end
+
+    class UploadToServiceAction < Action
+      def self.run(params)
+        UI.message("Uploading #{params[:file_path]} to service...")
+        
+        require 'net/http'
+        require 'uri'
+        
+        uri = URI.parse(params[:api_url])
+        request = Net::HTTP::Post.new(uri)
+        request['Authorization'] = "Bearer #{params[:api_key]}"
+        
+        form_data = [
+          ['file', File.open(params[:file_path])]
+        ]
+        request.set_form(form_data, 'multipart/form-data')
+        
+        response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+          http.request(request)
+        end
+        
+        if response.code == '200'
+          result = JSON.parse(response.body)
+          download_url = result['download_url']
+          
+          Actions.lane_context[SharedValues::UPLOAD_SERVICE_URL] = download_url
+          UI.success("Upload successful! URL: #{download_url}")
+          
+          return download_url
+        else
+          UI.user_error!("Upload failed: #{response.body}")
+        end
+      end
+
+      def self.description
+        "Upload files to a custom distribution service"
+      end
+
+      def self.details
+        "This action uploads your app binary to a custom distribution service " \
+        "and returns the download URL. It handles authentication and provides " \
+        "detailed error messages on failure."
+      end
+
+      def self.available_options
+        [
+          FastlaneCore::ConfigItem.new(
+            key: :api_key,
+            env_name: "UPLOAD_SERVICE_API_KEY",
+            description: "API key for authentication",
+            sensitive: true,
+            type: String
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :api_url,
+            env_name: "UPLOAD_SERVICE_API_URL",
+            description: "API endpoint URL",
+            default_value: "https://api.example.com/upload",
+            type: String
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :file_path,
+            description: "Path to file to upload",
+            default_value: Actions.lane_context[SharedValues::IPA_OUTPUT_PATH],
+            type: String,
+            verify_block: proc do |value|
+              UI.user_error!("File not found: #{value}") unless File.exist?(value)
+            end
+          )
+        ]
+      end
+
+      def self.output
+        [
+          ['UPLOAD_SERVICE_URL', 'Download URL for the uploaded file']
+        ]
+      end
+
+      def self.return_type
+        :string
+      end
+
+      def self.return_value
+        "Download URL for the uploaded file"
+      end
+
+      def self.sample_return_value
+        "https://cdn.example.com/builds/abc123.ipa"
+      end
+
+      def self.author
+        "your_username"
+      end
+
+      def self.is_supported?(platform)
+        [:ios, :android].include?(platform)
+      end
+
+      def self.example_code
+        [
+          'upload_to_service(api_key: "abc123")',
+          'upload_to_service(
+            api_key: ENV["UPLOAD_SERVICE_API_KEY"],
+            file_path: "./MyApp.ipa"
+          )',
+          'url = upload_to_service(api_key: "abc123")
+          slack(message: "Download here: #{url}")'
+        ]
+      end
+
+      def self.category
+        :beta
+      end
+    end
+  end
+end
+```
+
+## Testing Custom Actions
+
+You can test your custom actions by placing them in `fastlane/actions/` directory in your project:
+
+```bash
+mkdir -p fastlane/actions
+touch fastlane/actions/my_custom_action.rb
+```
+
+Then use them in your Fastfile:
+
+```ruby
+lane :deploy do
+  my_custom_action(
+    api_key: ENV['API_KEY'],
+    message: "Hello from fastlane"
+  )
+end
+```

@@ -1,0 +1,687 @@
+---
+title: Actions
+description: Learn about fastlane actions - the building blocks of automation
+---
+
+Actions are the individual tasks that make up your fastlane automation workflows. Each action performs a specific function, like building your app, running tests, or uploading to the App Store. fastlane includes over 170 built-in actions, and you can extend it with plugins or create your own custom actions.
+
+## What are Actions?
+
+Actions are Ruby classes that implement a `run` method. When you call an action in your Fastfile, fastlane executes that action's `run` method with the parameters you provide.
+
+```ruby
+lane :deploy do
+  # Each of these is an action
+  build_app(scheme: "MyApp")
+  upload_to_testflight
+  slack(message: "Build uploaded!")
+end
+```
+
+<Note>
+Actions are called using Ruby method syntax. You can use either parentheses `build_app(scheme: "MyApp")` or Ruby's optional syntax `build_app scheme: "MyApp"`.
+</Note>
+
+## Built-in Actions
+
+fastlane comes with a comprehensive set of built-in actions organized by category:
+
+<Tabs>
+  <Tab title="Building">
+    ```ruby
+    # Build iOS/macOS apps
+    build_app(
+      scheme: "MyApp",
+      export_method: "app-store"
+    )
+    gym # Alias for build_app
+    
+    # Build Android apps
+    build_android_app(
+      task: "assembleRelease",
+      project_dir: "android/"
+    )
+    gradle # Alias for build_android_app
+    ```
+  </Tab>
+  <Tab title="Testing">
+    ```ruby
+    # Run tests
+    run_tests(
+      scheme: "MyApp",
+      devices: ["iPhone 14"]
+    )
+    scan # Alias for run_tests
+    
+    # Android tests
+    gradle(task: "test")
+    ```
+  </Tab>
+  <Tab title="Code Signing">
+    ```ruby
+    # Manage certificates and profiles
+    match(
+      type: "appstore",
+      readonly: true
+    )
+    
+    # Get provisioning profiles
+    sigh(
+      app_identifier: "com.example.app",
+      adhoc: true
+    )
+    
+    # Manage certificates
+    cert
+    ```
+  </Tab>
+  <Tab title="Deployment">
+    ```ruby
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+    
+    # Upload to App Store
+    upload_to_app_store(
+      submit_for_review: true,
+      automatic_release: false
+    )
+    
+    # Upload to Play Store
+    upload_to_play_store(
+      track: "beta",
+      skip_upload_screenshots: true
+    )
+    ```
+  </Tab>
+  <Tab title="Source Control">
+    ```ruby
+    # Git operations
+    ensure_git_status_clean
+    ensure_git_branch(branch: "main")
+    commit_version_bump(message: "Version Bump")
+    add_git_tag(tag: "v1.0.0")
+    push_to_git_remote
+    git_pull
+    ```
+  </Tab>
+  <Tab title="Notifications">
+    ```ruby
+    # Slack notifications
+    slack(
+      message: "Build successful!",
+      channel: "#mobile-builds",
+      success: true
+    )
+    
+    # Local notifications
+    notification(
+      subtitle: "fastlane",
+      message: "Build complete"
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Using Actions
+
+### Basic Usage
+
+Actions are called like Ruby methods:
+
+```ruby
+lane :test do
+  # Simple action call
+  cocoapods
+  
+  # Action with parameters
+  scan(scheme: "MyApp")
+  
+  # Action with multiple parameters
+  build_app(
+    scheme: "MyApp",
+    configuration: "Release",
+    export_method: "app-store",
+    output_directory: "./build"
+  )
+end
+```
+
+### Action Parameters
+
+Actions accept parameters as a hash:
+
+```ruby
+build_app(
+  scheme: "MyApp",              # Required parameter
+  configuration: "Release",      # Optional parameter
+  clean: true,                   # Boolean parameter
+  export_method: "app-store",   # String parameter
+  output_directory: "./build"   # Path parameter
+)
+```
+
+### Action Return Values
+
+Many actions return values that you can use:
+
+```ruby
+lane :version_info do
+  # Get version number
+  version = get_version_number(xcodeproj: "MyApp.xcodeproj")
+  
+  # Get build number  
+  build = get_build_number(xcodeproj: "MyApp.xcodeproj")
+  
+  # Use the returned values
+  UI.message("Version: #{version} (#{build})")
+  
+  # Get IPA path from build_app
+  ipa_path = build_app(scheme: "MyApp")
+  UI.message("IPA created at: #{ipa_path}")
+end
+```
+
+## Action Output and Shared Values
+
+Actions can store output in shared values that other actions can access:
+
+```ruby
+lane :build_and_deploy do
+  # build_app stores its output path in SharedValues
+  build_app(scheme: "MyApp")
+  
+  # Access the shared value
+  ipa_path = lane_context[SharedValues::IPA_OUTPUT_PATH]
+  dsym_path = lane_context[SharedValues::DSYM_OUTPUT_PATH]
+  
+  UI.message("IPA: #{ipa_path}")
+  UI.message("dSYM: #{dsym_path}")
+  
+  # Use the paths in other actions
+  upload_to_testflight(ipa: ipa_path)
+end
+```
+
+Common shared values:
+
+```ruby
+SharedValues::IPA_OUTPUT_PATH          # Path to generated IPA
+SharedValues::DSYM_OUTPUT_PATH         # Path to dSYM files
+SharedValues::BUILD_NUMBER             # Current build number
+SharedValues::VERSION_NUMBER           # Current version number
+SharedValues::LANE_NAME                # Current lane name
+SharedValues::PLATFORM_NAME            # Current platform
+SharedValues::XCODEBUILD_ARCHIVE       # Path to xcarchive
+```
+
+## Getting Help with Actions
+
+fastlane provides built-in documentation for all actions:
+
+```bash
+# View all available actions
+fastlane actions
+
+# Get detailed information about a specific action
+fastlane action build_app
+fastlane action match
+fastlane action upload_to_testflight
+
+# Search for actions
+fastlane search screenshot
+```
+
+## Plugin Actions
+
+Extend fastlane with plugin actions from the community:
+
+```ruby
+# Install a plugin
+# Run: fastlane add_plugin versioning
+
+# Use plugin actions in your Fastfile
+lane :version do
+  # Actions from fastlane-plugin-versioning
+  increment_version_number_in_plist(
+    target: "MyApp",
+    bump_type: "minor"
+  )
+  
+  get_version_number_from_plist(
+    target: "MyApp"
+  )
+end
+```
+
+<Accordion title="Finding Plugins">
+  Search for available plugins:
+  
+  ```bash
+  # Search for plugins
+  fastlane search_plugins version
+  
+  # Install a plugin
+  fastlane add_plugin badge
+  fastlane add_plugin firebase_app_distribution
+  ```
+  
+  Popular plugins include:
+  - `versioning` - Advanced version number management
+  - `badge` - Add badges to app icons
+  - `firebase_app_distribution` - Distribute to Firebase
+  - `changelog` - Generate changelogs
+  - `xcov` - Code coverage reports
+</Accordion>
+
+## Creating Custom Actions
+
+Create your own actions for project-specific tasks:
+
+### Generate a New Action
+
+```bash
+fastlane new_action
+```
+
+This creates a new action file in `fastlane/actions/`.
+
+### Action Structure
+
+Here's a complete custom action example:
+
+```ruby
+module Fastlane
+  module Actions
+    class AddGitTagAction < Action
+      def self.run(params)
+        tag = params[:tag]
+        message = params[:message] || "#{tag} (fastlane)"
+        
+        cmd = ['git tag']
+        cmd << ['-am', message.shellescape]
+        cmd << '--force' if params[:force]
+        cmd << tag.shellescape
+        
+        UI.message("Adding git tag '#{tag}' 🎯")
+        Actions.sh(cmd.join(' '))
+      end
+      
+      def self.description
+        "This will add an annotated git tag to the current branch"
+      end
+      
+      def self.details
+        "Automatically tags your builds with a consistent format"
+      end
+      
+      def self.available_options
+        [
+          FastlaneCore::ConfigItem.new(
+            key: :tag,
+            env_name: "FL_GIT_TAG_TAG",
+            description: "The tag name to create",
+            optional: false,
+            type: String
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :message,
+            env_name: "FL_GIT_TAG_MESSAGE",
+            description: "The tag message",
+            optional: true,
+            type: String
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :force,
+            env_name: "FL_GIT_TAG_FORCE",
+            description: "Force adding the tag",
+            optional: true,
+            type: Boolean,
+            default_value: false
+          )
+        ]
+      end
+      
+      def self.output
+        [
+          ['GIT_TAG', 'The tag that was created']
+        ]
+      end
+      
+      def self.return_value
+        "The tag name that was created"
+      end
+      
+      def self.authors
+        ["YourName"]
+      end
+      
+      def self.is_supported?(platform)
+        true  # Works on all platforms
+      end
+      
+      def self.example_code
+        [
+          'add_git_tag(tag: "v1.0.0")',
+          'add_git_tag(
+            tag: "v1.0.0",
+            message: "Release version 1.0.0",
+            force: true
+          )'
+        ]
+      end
+      
+      def self.category
+        :source_control
+      end
+    end
+  end
+end
+```
+
+### Action Components
+
+<Accordion title="run method">
+  The main method that executes your action's logic:
+  
+  ```ruby
+  def self.run(params)
+    # Access parameters
+    value = params[:parameter_name]
+    
+    # Do work
+    result = some_operation(value)
+    
+    # Store in shared values
+    Actions.lane_context[SharedValues::MY_OUTPUT] = result
+    
+    # Return a value
+    return result
+  end
+  ```
+</Accordion>
+
+<Accordion title="available_options">
+  Define the parameters your action accepts:
+  
+  ```ruby
+  def self.available_options
+    [
+      FastlaneCore::ConfigItem.new(
+        key: :scheme,
+        env_name: "MY_ACTION_SCHEME",
+        description: "The project scheme",
+        optional: false,
+        type: String
+      ),
+      FastlaneCore::ConfigItem.new(
+        key: :clean,
+        description: "Clean before building",
+        optional: true,
+        type: Boolean,
+        default_value: false
+      )
+    ]
+  end
+  ```
+</Accordion>
+
+<Accordion title="description and details">
+  Document what your action does:
+  
+  ```ruby
+  def self.description
+    "Short one-line description"
+  end
+  
+  def self.details
+    "Longer description with more context about what "\
+    "this action does and when to use it."
+  end
+  ```
+</Accordion>
+
+<Accordion title="example_code">
+  Provide usage examples:
+  
+  ```ruby
+  def self.example_code
+    [
+      'my_action(scheme: "MyApp")',
+      'my_action(
+        scheme: "MyApp",
+        clean: true,
+        configuration: "Release"
+      )'
+    ]
+  end
+  ```
+</Accordion>
+
+## Shell Commands in Actions
+
+Actions can execute shell commands:
+
+```ruby
+module Fastlane
+  module Actions
+    class MyShellAction < Action
+      def self.run(params)
+        # Execute a shell command
+        sh "ls -la"
+        
+        # With options
+        result = sh(
+          "git log -1 --oneline",
+          log: true,
+          error_callback: ->(result) {
+            UI.error("Command failed!")
+          }
+        )
+        
+        # Capture output
+        version = sh("cat VERSION", log: false).strip
+        
+        return version
+      end
+    end
+  end
+end
+```
+
+## Action Categories
+
+Organize your actions by category:
+
+```ruby
+def self.category
+  :testing      # Testing-related
+  :building     # Build actions
+  :screenshots  # Screenshot generation
+  :project      # Xcode project modification
+  :code_signing # Certificates and profiles
+  :documentation # Documentation generation
+  :beta         # Beta distribution
+  :push         # Push notifications
+  :production   # Production release
+  :source_control # Git operations
+  :notifications # Notifications (Slack, etc.)
+  :app_store_connect # App Store Connect operations
+  :misc         # Everything else
+  :deprecated   # Deprecated actions
+end
+```
+
+## Error Handling in Actions
+
+```ruby
+module Fastlane
+  module Actions
+    class SafeAction < Action
+      def self.run(params)
+        # User error (shown nicely)
+        UI.user_error!("Missing required parameter") unless params[:required_param]
+        
+        # Important message
+        UI.important("This is an important warning")
+        
+        # Success message
+        UI.success("Operation completed successfully!")
+        
+        # Error message (doesn't stop execution)
+        UI.error("Something went wrong, but continuing...")
+        
+        # Crash (for internal errors)
+        UI.crash!("Something is seriously wrong!")
+      end
+    end
+  end
+end
+```
+
+## Best Practices
+
+<Warning>
+**Avoid Complex Logic in Lanes**
+
+If you find yourself writing complex Ruby logic in your lanes, consider creating a custom action instead. Actions are more reusable, testable, and maintainable.
+</Warning>
+
+<Accordion title="Use Action Parameters">
+  Always use the params hash for configuration:
+  
+  ```ruby
+  # Good
+  def self.run(params)
+    scheme = params[:scheme]
+    configuration = params[:configuration]
+  end
+  
+  # Bad - don't use global variables
+  def self.run(params)
+    scheme = $global_scheme
+  end
+  ```
+</Accordion>
+
+<Accordion title="Provide Good Documentation">
+  ```ruby
+  # Complete documentation
+  def self.description
+    "Build and sign your iOS app"
+  end
+  
+  def self.details
+    "This action builds your iOS app using gym. " \
+    "It handles code signing and exports the IPA file."
+  end
+  
+  def self.example_code
+    [
+      'build_my_app(scheme: "MyApp")',
+      'build_my_app(
+        scheme: "MyApp",
+        configuration: "Release",
+        clean: true
+      )'
+    ]
+  end
+  ```
+</Accordion>
+
+<Accordion title="Store Output in Shared Values">
+  ```ruby
+  def self.run(params)
+    result = do_work(params)
+    
+    # Store for other actions to use
+    Actions.lane_context[SharedValues::MY_OUTPUT] = result
+    
+    return result
+  end
+  
+  def self.output
+    [
+      ['MY_OUTPUT', 'Description of the output value']
+    ]
+  end
+  ```
+</Accordion>
+
+## Real-World Example
+
+Here's a complete example showing action usage in a production lane:
+
+```ruby
+lane :release do
+  # Ensure git is clean
+  ensure_git_status_clean
+  ensure_git_branch(branch: "main")
+  
+  # Pull latest changes
+  git_pull
+  
+  # Install dependencies
+  cocoapods
+  
+  # Run tests
+  scan(
+    scheme: "MyApp",
+    devices: ["iPhone 14", "iPad Pro (12.9-inch)"],
+    code_coverage: true
+  )
+  
+  # Increment version
+  increment_build_number(xcodeproj: "MyApp.xcodeproj")
+  
+  # Code signing
+  match(
+    type: "appstore",
+    readonly: true
+  )
+  
+  # Build
+  build_app(
+    scheme: "MyApp",
+    export_method: "app-store",
+    configuration: "Release",
+    clean: true
+  )
+  
+  # Upload
+  upload_to_app_store(
+    submit_for_review: true,
+    automatic_release: false,
+    force: true,
+    skip_screenshots: true,
+    skip_metadata: false
+  )
+  
+  # Git operations
+  commit_version_bump(message: "Version Bump")
+  add_git_tag(
+    tag: "v#{get_version_number}",
+    message: "Release version #{get_version_number}"
+  )
+  push_to_git_remote
+  
+  # Notifications
+  slack(
+    message: "Successfully released version #{get_version_number} to the App Store!",
+    channel: "#releases",
+    success: true
+  )
+end
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Plugins" icon="puzzle-piece" href="/concepts/plugins">
+    Extend fastlane with community plugins
+  </Card>
+  <Card title="Available Actions" icon="list" href="/actions">
+    Browse all built-in actions
+  </Card>
+</CardGroup>

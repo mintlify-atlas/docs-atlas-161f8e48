@@ -1,0 +1,546 @@
+---
+title: Jenkins Integration
+description: Set up fastlane on Jenkins for automated iOS and macOS builds
+---
+
+## Overview
+
+Jenkins is a popular open-source automation server. The `setup_jenkins` action helps configure fastlane to work seamlessly with Jenkins, handling keychains, code signing, and build artifacts.
+
+## Quick Start
+
+Add this to the beginning of your `Fastfile`:
+
+```ruby
+platform :ios do
+  before_all do
+    setup_jenkins
+  end
+
+  lane :test do
+    run_tests(scheme: "MyApp")
+  end
+
+  lane :beta do
+    match(type: "appstore")
+    build_app(scheme: "MyApp")
+    upload_to_testflight
+  end
+end
+```
+
+## The setup_jenkins Action
+
+The `setup_jenkins` action configures Xcode build tools for Jenkins integration. It only runs when the `JENKINS_HOME` or `JENKINS_URL` environment variables are detected.
+
+### What it Does
+
+<Steps>
+  <Step title="Unlocks Keychain">
+    Unlocks the keychain from Jenkins' Keychains and Provisioning Profiles Plugin
+    
+    - Adds keychain to search list
+    - Sets as default keychain
+    - Configures match to use this keychain
+  </Step>
+  
+  <Step title="Sets Code Signing Identity">
+    Uses the code signing identity from Jenkins environment
+  </Step>
+  
+  <Step title="Configures Output Directory">
+    Sets output directory to `./output` for:
+    
+    - IPA files (gym)
+    - Test results (scan)
+    - Archives (backup_xcarchive)
+  </Step>
+  
+  <Step title="Sets Derived Data Path">
+    Creates dedicated derived data at `./derivedData` for:
+    
+    - Xcodebuild
+    - Gym
+    - Scan
+    - Carthage
+    - Slather
+  </Step>
+  
+  <Step title="Enables Result Bundles">
+    Automatically generates result bundles for test and build results
+  </Step>
+</Steps>
+
+### Parameters
+
+```ruby
+setup_jenkins(
+  force: false,                           # Force setup even if not on Jenkins
+  unlock_keychain: true,                  # Unlock keychain
+  add_keychain_to_search_list: :replace,  # :add, :replace, true, or false
+  set_default_keychain: true,             # Set as default keychain
+  keychain_path: nil,                     # Path to keychain (from env)
+  keychain_password: "",                  # Keychain password (from env)
+  set_code_signing_identity: true,        # Use CODE_SIGNING_IDENTITY env var
+  code_signing_identity: nil,             # Code signing identity (from env)
+  output_directory: "./output",           # Build artifacts directory
+  derived_data_path: "./derivedData",     # Derived data directory
+  result_bundle: true                     # Generate result bundles
+)
+```
+
+## Jenkins Configuration
+
+### Installing Jenkins
+
+<Steps>
+  <Step title="Install Jenkins">
+    On macOS, use Homebrew:
+    
+    ```bash
+    brew install jenkins-lts
+    brew services start jenkins-lts
+    ```
+    
+    Access Jenkins at `http://localhost:8080`
+  </Step>
+  
+  <Step title="Install Required Plugins">
+    Navigate to **Manage Jenkins → Plugins** and install:
+    
+    - Keychains and Provisioning Profiles Plugin
+    - Git Plugin
+    - Credentials Plugin
+    - Environment Injector Plugin
+  </Step>
+  
+  <Step title="Configure Xcode">
+    Ensure Xcode command line tools are installed:
+    
+    ```bash
+    xcode-select --install
+    ```
+  </Step>
+</Steps>
+
+### Setting Up Keychains and Provisioning Profiles Plugin
+
+<Steps>
+  <Step title="Upload Keychain">
+    1. Go to **Manage Jenkins → Credentials**
+    2. Click **Add Credentials**
+    3. Select **Apple Development Keychain**
+    4. Upload your keychain file
+    5. Enter keychain password
+  </Step>
+  
+  <Step title="Configure in Job">
+    In your Jenkins job configuration:
+    
+    1. Check **Keychains and Code Signing Identities**
+    2. Select your keychain
+    3. Select code signing identity
+    
+    This sets the `KEYCHAIN_PATH` and `CODE_SIGNING_IDENTITY` environment variables
+  </Step>
+</Steps>
+
+## Jenkinsfile Examples
+
+### Basic Pipeline
+
+```groovy
+pipeline {
+    agent { label 'macos' }
+    
+    environment {
+        // Fastlane environment variables
+        FASTLANE_USER = credentials('apple-id-email')
+        FASTLANE_PASSWORD = credentials('apple-id-password')
+        MATCH_PASSWORD = credentials('match-password')
+        MATCH_GIT_URL = 'https://github.com/your-org/certificates.git'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Setup') {
+            steps {
+                sh 'bundle install'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                sh 'bundle exec fastlane test'
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                sh 'bundle exec fastlane beta'
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Archive build artifacts
+            archiveArtifacts artifacts: 'output/**/*', allowEmptyArchive: true
+            
+            // Publish test results
+            junit 'output/scan/*.junit'
+        }
+        
+        success {
+            echo 'Build succeeded!'
+        }
+        
+        failure {
+            echo 'Build failed!'
+        }
+    }
+}
+```
+
+### Advanced Pipeline with Multiple Lanes
+
+```groovy
+pipeline {
+    agent { label 'macos' }
+    
+    environment {
+        FASTLANE_USER = credentials('apple-id-email')
+        MATCH_PASSWORD = credentials('match-password')
+        MATCH_GIT_URL = 'https://github.com/your-org/certificates.git'
+        
+        // Use App Store Connect API Key (recommended)
+        APP_STORE_CONNECT_API_KEY_KEY_ID = credentials('asc-key-id')
+        APP_STORE_CONNECT_API_KEY_ISSUER_ID = credentials('asc-issuer-id')
+        APP_STORE_CONNECT_API_KEY_KEY = credentials('asc-key-content')
+    }
+    
+    stages {
+        stage('Setup') {
+            steps {
+                sh 'bundle install'
+                sh 'bundle exec pod install'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                sh 'bundle exec fastlane test'
+            }
+        }
+        
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    if (env.BRANCH_NAME == 'main') {
+                        sh 'bundle exec fastlane beta'
+                    } else if (env.BRANCH_NAME.startsWith('release/')) {
+                        sh 'bundle exec fastlane release'
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            archiveArtifacts artifacts: 'output/**/*.ipa', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'output/**/*.dSYM.zip', allowEmptyArchive: true
+            junit 'output/scan/*.junit'
+        }
+    }
+}
+```
+
+### Freestyle Project Configuration
+
+For freestyle Jenkins jobs:
+
+```bash
+#!/bin/bash
+
+# Install dependencies
+bundle install
+
+# Run fastlane
+bundle exec fastlane beta
+```
+
+## Environment Configuration
+
+### Required Environment Variables
+
+Set these in Jenkins credentials or job configuration:
+
+<CodeGroup>
+```bash App Store Connect API (Recommended)
+# API Key ID
+APP_STORE_CONNECT_API_KEY_KEY_ID=ABC123
+
+# Issuer ID
+APP_STORE_CONNECT_API_KEY_ISSUER_ID=xyz-123-abc
+
+# Key content (base64 or path)
+APP_STORE_CONNECT_API_KEY_KEY="-----BEGIN PRIVATE KEY-----\n..."
+```
+
+```bash Apple ID (Legacy)
+# Apple ID email
+FASTLANE_USER=your@email.com
+
+# Apple ID password
+FASTLANE_PASSWORD=your_password
+
+# App-specific password for 2FA
+FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD=xxxx-xxxx-xxxx-xxxx
+```
+
+```bash Match Configuration
+# Match git repository
+MATCH_GIT_URL=https://github.com/your-org/certificates.git
+
+# Match password
+MATCH_PASSWORD=your_strong_password
+
+# Git credentials for match (if using HTTPS)
+MATCH_GIT_BASIC_AUTHORIZATION=base64_encoded_credentials
+```
+</CodeGroup>
+
+### Environment Variables Set by setup_jenkins
+
+These are automatically configured:
+
+```bash
+# Output directories
+GYM_BUILD_PATH=./output
+GYM_OUTPUT_DIRECTORY=./output
+SCAN_OUTPUT_DIRECTORY=./output
+BACKUP_XCARCHIVE_DESTINATION=./output
+
+# Derived data
+DERIVED_DATA_PATH=./derivedData
+XCODE_DERIVED_DATA_PATH=./derivedData
+GYM_DERIVED_DATA_PATH=./derivedData
+SCAN_DERIVED_DATA_PATH=./derivedData
+FL_CARTHAGE_DERIVED_DATA=./derivedData
+FL_SLATHER_BUILD_DIRECTORY=./derivedData
+
+# Code signing (from Jenkins plugin)
+GYM_CODE_SIGNING_IDENTITY=$CODE_SIGNING_IDENTITY
+
+# Match configuration
+MATCH_KEYCHAIN_NAME=$KEYCHAIN_PATH
+MATCH_KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD
+MATCH_READONLY=true
+
+# Result bundles
+GYM_RESULT_BUNDLE=YES
+SCAN_RESULT_BUNDLE=YES
+```
+
+## Common Issues
+
+### Keychain Unlock Errors
+
+**Problem:** `User interaction is not allowed` or keychain locked errors
+
+**Solution:**
+
+```ruby
+# Ensure keychain is unlocked
+setup_jenkins(
+  unlock_keychain: true,
+  keychain_password: ENV['KEYCHAIN_PASSWORD']
+)
+
+# Or manually unlock
+unlock_keychain(
+  path: ENV['KEYCHAIN_PATH'],
+  password: ENV['KEYCHAIN_PASSWORD'],
+  set_default: true
+)
+```
+
+### Code Signing Errors
+
+**Problem:** `No code signing identity found`
+
+**Solution:**
+
+1. Verify keychain contains certificates:
+   ```bash
+   security find-identity -p codesigning ~/Library/Keychains/login.keychain-db
+   ```
+
+2. Use match to sync certificates:
+   ```ruby
+   match(type: "appstore", readonly: true)
+   ```
+
+### Timeout Errors
+
+**Problem:** Build times out waiting for input
+
+**Solution:**
+
+```ruby
+# Disable interactive prompts
+ENV['FASTLANE_SKIP_UPDATE_CHECK'] = '1'
+ENV['FASTLANE_HIDE_CHANGELOG'] = '1'
+
+# In your lane
+lane :beta do
+  # Skip certificate verification prompts
+  match(type: "appstore", readonly: true)
+  build_app(scheme: "MyApp", skip_codesigning: false)
+end
+```
+
+### Permission Errors
+
+**Problem:** Jenkins user can't access files
+
+**Solution:**
+
+```bash
+# Run Jenkins as your user account
+sudo launchctl unload /Library/LaunchDaemons/org.jenkins-ci.plist
+
+# Edit the plist to use your user account
+# Then reload
+sudo launchctl load /Library/LaunchDaemons/org.jenkins-ci.plist
+```
+
+## Best Practices
+
+### 1. Use Dedicated Build Nodes
+
+Label macOS agents for iOS builds:
+
+```groovy
+agent { label 'macos && xcode' }
+```
+
+### 2. Cache Dependencies
+
+```groovy
+stage('Setup') {
+    steps {
+        // Cache gems
+        sh 'bundle config set path vendor/bundle'
+        sh 'bundle install --jobs 4 --retry 3'
+    }
+}
+```
+
+### 3. Separate Build Directories
+
+Each Jenkins job gets its own workspace, preventing conflicts:
+
+```ruby
+# Fastfile
+setup_jenkins(
+  output_directory: ENV['WORKSPACE'] + '/output',
+  derived_data_path: ENV['WORKSPACE'] + '/derivedData'
+)
+```
+
+### 4. Clean Up Old Builds
+
+Configure Jenkins to discard old builds:
+
+```groovy
+options {
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+}
+```
+
+### 5. Use Credentials Plugin
+
+Store secrets in Jenkins credentials, not in code:
+
+```groovy
+environment {
+    MATCH_PASSWORD = credentials('match-password-id')
+}
+```
+
+## Example Fastfile
+
+```ruby
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    # Only run setup_jenkins when on Jenkins
+    setup_jenkins if is_ci
+  end
+
+  desc "Run tests"
+  lane :test do
+    run_tests(
+      scheme: "MyApp",
+      devices: ["iPhone 15"],
+      clean: true
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    # Sync certificates and profiles
+    match(
+      type: "appstore",
+      readonly: is_ci  # Readonly on CI, can create locally
+    )
+    
+    # Increment build number
+    increment_build_number(
+      build_number: ENV['BUILD_NUMBER']  # Use Jenkins build number
+    )
+    
+    # Run tests
+    test
+    
+    # Build the app
+    build_app(
+      scheme: "MyApp",
+      export_method: "app-store"
+    )
+    
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  after_all do |lane|
+    # Clean up
+    clean_build_artifacts
+  end
+
+  error do |lane, exception|
+    # Handle errors
+    puts "Error in lane #{lane}: #{exception}"
+  end
+end
+```
+
+## Related Actions
+
+- [setup_ci](/actions/setup_ci) - Generic CI setup
+- [unlock_keychain](/actions/unlock_keychain) - Unlock keychain manually
+- [match](/actions/match) - Code signing management
+- [is_ci](/actions/is_ci) - Detect CI environment

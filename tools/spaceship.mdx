@@ -1,0 +1,496 @@
+---
+title: spaceship
+description: Ruby library to access the Apple Developer Portal and App Store Connect APIs
+---
+
+## Overview
+
+spaceship is a Ruby library that exposes both the Apple Developer Portal and App Store Connect APIs. It provides fast, object-oriented access to all resources and powers many fastlane tools internally.
+
+<Info>
+spaceship combines multiple Apple APIs to provide a unified interface for managing your apps, certificates, devices, and more.
+</Info>
+
+## Installation
+
+spaceship is included with fastlane:
+
+```bash
+gem install fastlane
+```
+
+Or add to your Gemfile:
+
+```ruby
+gem 'fastlane'
+```
+
+## Quick Start
+
+### Developer Portal API
+
+```ruby
+require 'spaceship'
+
+# Login
+Spaceship::Portal.login("user@example.com")
+Spaceship::Portal.select_team
+
+# List all apps
+Spaceship::Portal::App.all.each do |app|
+  puts "#{app.name} (#{app.bundle_id})"
+end
+
+# Create a new app
+app = Spaceship::Portal::App.create!(
+  bundle_id: "com.example.newapp",
+  name: "My New App"
+)
+```
+
+### App Store Connect API
+
+```ruby
+require 'spaceship'
+
+# Login
+Spaceship::ConnectAPI.login("user@example.com")
+Spaceship::ConnectAPI.select_team
+
+# Get app
+app = Spaceship::ConnectAPI::App.find("com.example.app")
+
+# List builds
+builds = app.get_builds
+builds.each do |build|
+  puts "Version #{build.version} (#{build.build_number})"
+end
+```
+
+## Authentication
+
+### Username and Password
+
+```ruby
+Spaceship::Portal.login("user@example.com", "password")
+```
+
+### App Store Connect API Key
+
+```ruby
+require 'spaceship'
+
+Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(
+  key_id: "ABC123",
+  issuer_id: "XYZ789",
+  key_filepath: "./AuthKey_ABC123.p8"
+)
+```
+
+### Two-Factor Authentication
+
+spaceship handles 2FA automatically:
+
+```ruby
+Spaceship::Portal.login("user@example.com")
+# You'll be prompted to enter the 2FA code
+```
+
+## Developer Portal
+
+### Managing Apps
+
+```ruby
+require 'spaceship'
+
+Spaceship::Portal.login
+
+# List all apps
+apps = Spaceship::Portal::App.all
+
+# Find specific app
+app = Spaceship::Portal::App.find("com.example.app")
+
+# Create new app
+app = Spaceship::Portal::App.create!(
+  bundle_id: "com.example.newapp",
+  name: "My New App"
+)
+
+# Update app
+app.name = "Updated Name"
+app.update!
+```
+
+### Managing Certificates
+
+```ruby
+# List all certificates
+certs = Spaceship::Portal::Certificate.all
+
+# Development certificates
+dev_certs = Spaceship::Portal::Certificate::Development.all
+
+# Distribution certificates
+dist_certs = Spaceship::Portal::Certificate::Production.all
+
+# Create new certificate
+csr, pkey = Spaceship::Portal::Certificate.create_certificate_signing_request
+cert = Spaceship::Portal::Certificate::Production.create!(csr: csr)
+
+# Revoke certificate
+cert.revoke!
+```
+
+### Managing Devices
+
+```ruby
+# List all devices
+devices = Spaceship::Portal::Device.all
+
+# Find device by UDID
+device = Spaceship::Portal::Device.find_by_udid("abc123...")
+
+# Register new device
+device = Spaceship::Portal::Device.create!(
+  name: "John's iPhone",
+  udid: "abc123..."
+)
+
+# Different device classes
+iphones = Spaceship::Portal::Device.all_iphones
+ipads = Spaceship::Portal::Device.all_ipads
+watches = Spaceship::Portal::Device.all_watches
+tvs = Spaceship::Portal::Device.all_apple_tvs
+macs = Spaceship::Portal::Device.all_macs
+```
+
+### Managing Provisioning Profiles
+
+```ruby
+# List all profiles
+profiles = Spaceship::Portal::ProvisioningProfile.all
+
+# Development profiles
+dev_profiles = Spaceship::Portal::ProvisioningProfile::Development.all
+
+# Ad Hoc profiles
+adhoc_profiles = Spaceship::Portal::ProvisioningProfile::AdHoc.all
+
+# App Store profiles
+appstore_profiles = Spaceship::Portal::ProvisioningProfile::AppStore.all
+
+# Find specific profile
+profile = Spaceship::Portal::ProvisioningProfile.find_by_bundle_id(
+  "com.example.app"
+)
+
+# Create new profile
+profile = Spaceship::Portal::ProvisioningProfile::Development.create!(
+  bundle_id: "com.example.app",
+  certificate: cert,
+  name: "Development Profile"
+)
+
+# Download profile
+File.write("profile.mobileprovision", profile.download)
+
+# Repair profile (update devices)
+profile.repair!
+```
+
+## App Store Connect
+
+### Managing Apps
+
+```ruby
+require 'spaceship'
+
+Spaceship::ConnectAPI.login
+
+# List all apps
+apps = Spaceship::ConnectAPI::App.all
+
+# Find app by bundle ID
+app = Spaceship::ConnectAPI::App.find("com.example.app")
+
+# Get app info
+puts app.name
+puts app.bundle_id
+puts app.sku
+```
+
+### Managing Builds
+
+```ruby
+# Get app
+app = Spaceship::ConnectAPI::App.find("com.example.app")
+
+# Get all builds
+builds = app.get_builds
+
+# Get builds for specific version
+builds = app.get_builds(filter: { version: "1.0" })
+
+# Get latest build
+latest_build = builds.first
+
+puts "Build: #{latest_build.version} (#{latest_build.build_number})"
+puts "Processing state: #{latest_build.processing_state}"
+```
+
+### Managing TestFlight
+
+```ruby
+# Get app
+app = Spaceship::ConnectAPI::App.find("com.example.app")
+
+# Get beta groups
+groups = app.get_beta_groups
+
+# Get testers
+testers = Spaceship::ConnectAPI::BetaTester.all
+
+# Add tester
+tester = Spaceship::ConnectAPI::BetaTester.create(
+  email: "tester@example.com",
+  first_name: "John",
+  last_name: "Doe"
+)
+
+# Add tester to group
+group.add_beta_tester(tester: tester)
+
+# Get build
+build = app.get_builds.first
+
+# Add build to group
+build.add_beta_groups(beta_groups: [group])
+```
+
+### Managing App Metadata
+
+```ruby
+app = Spaceship::ConnectAPI::App.find("com.example.app")
+
+# Get app info
+app_info = app.fetch_live_app_info
+
+# Get localizations
+localizations = app_info.get_app_info_localizations
+
+localizations.each do |localization|
+  puts "#{localization.locale}: #{localization.name}"
+end
+```
+
+## Advanced Usage
+
+### Custom API Requests
+
+```ruby
+# Make custom API request
+response = Spaceship::ConnectAPI.client.get(
+  "apps",
+  filter: { bundleId: "com.example.app" }
+)
+```
+
+### Error Handling
+
+```ruby
+begin
+  Spaceship::Portal.login("user@example.com")
+  app = Spaceship::Portal::App.find("com.example.app")
+rescue Spaceship::Client::InvalidUserCredentialsError
+  puts "Invalid credentials"
+rescue Spaceship::Client::UnexpectedResponse => e
+  puts "API Error: #{e.message}"
+end
+```
+
+### Session Management
+
+```ruby
+# Save session
+Spaceship::Portal.login("user@example.com")
+File.write("session.txt", Spaceship::Portal.client.store_session)
+
+# Load session
+Spaceship::Portal.login("user@example.com") do
+  Spaceship::Portal.client.load_session(File.read("session.txt"))
+end
+```
+
+## Common Use Cases
+
+### Register Multiple Devices
+
+```ruby
+require 'spaceship'
+require 'csv'
+
+Spaceship::Portal.login
+
+CSV.foreach('devices.csv', headers: true) do |row|
+  Spaceship::Portal::Device.create!(
+    name: row['name'],
+    udid: row['udid']
+  )
+  puts "Registered: #{row['name']}"
+end
+```
+
+### Download All Profiles
+
+```ruby
+require 'spaceship'
+
+Spaceship::Portal.login
+
+profiles = Spaceship::Portal::ProvisioningProfile.all
+
+profiles.each do |profile|
+  filename = "#{profile.name}.mobileprovision"
+  File.write(filename, profile.download)
+  puts "Downloaded: #{filename}"
+end
+```
+
+### Monitor Build Processing
+
+```ruby
+require 'spaceship'
+
+Spaceship::ConnectAPI.login
+
+app = Spaceship::ConnectAPI::App.find("com.example.app")
+build = app.get_builds.first
+
+until build.processing_state == "VALID"
+  puts "Processing: #{build.processing_state}"
+  sleep 30
+  build = app.get_builds.first
+end
+
+puts "Build ready!"
+```
+
+### Expire Old Builds
+
+```ruby
+require 'spaceship'
+
+Spaceship::ConnectAPI.login
+
+app = Spaceship::ConnectAPI::App.find("com.example.app")
+builds = app.get_builds
+
+# Keep only the latest 5 builds
+builds[5..-1]&.each do |build|
+  build.expire!
+  puts "Expired: #{build.version} (#{build.build_number})"
+end
+```
+
+## API Endpoints
+
+spaceship uses multiple Apple API endpoints:
+
+1. **App Store Connect API** - Official REST API
+2. **Developer Portal API** - Web service API
+3. **TestFlight API** - Beta testing management
+4. **iTunes Connect API** - Legacy API (being phased out)
+5. **Apple ID Authentication** - SSO and 2FA
+
+## Environment Variables
+
+<ResponseField name="FASTLANE_USER" type="string">
+  Apple ID username
+</ResponseField>
+
+<ResponseField name="FASTLANE_PASSWORD" type="string">
+  Apple ID password (use with caution)
+</ResponseField>
+
+<ResponseField name="FASTLANE_SESSION" type="string">
+  Stored session token
+</ResponseField>
+
+<ResponseField name="FASTLANE_TEAM_ID" type="string">
+  Developer Portal team ID
+</ResponseField>
+
+<ResponseField name="FASTLANE_ITC_TEAM_ID" type="string">
+  App Store Connect team ID
+</ResponseField>
+
+## Tips & Best Practices
+
+<Tip>
+**Use API keys**: Prefer App Store Connect API keys over username/password for better security and reliability.
+</Tip>
+
+<Warning>
+**Rate limiting**: Apple's APIs have rate limits. Implement proper error handling and retries.
+</Warning>
+
+<Tip>
+**Cache sessions**: Store and reuse sessions to avoid repeated authentication.
+</Tip>
+
+<Check>
+**Error handling**: Always wrap spaceship calls in begin/rescue blocks for production use.
+</Check>
+
+## Common Errors
+
+### Invalid Credentials
+
+```ruby
+rescue Spaceship::Client::InvalidUserCredentialsError
+  puts "Check your Apple ID and password"
+end
+```
+
+### 2FA Required
+
+```ruby
+# spaceship handles 2FA automatically
+# You'll be prompted to enter the code
+Spaceship::Portal.login("user@example.com")
+```
+
+### Session Expired
+
+```ruby
+rescue Spaceship::Client::UnauthorizedAccessError
+  puts "Session expired, logging in again..."
+  Spaceship::Portal.login
+  retry
+end
+```
+
+## Tools Built with spaceship
+
+Many fastlane tools use spaceship internally:
+
+- [cert](/tools/cert) - Certificate management
+- [sigh](/tools/sigh) - Provisioning profile management
+- [pilot](/tools/pilot) - TestFlight management
+- [produce](/tools/produce) - App creation
+- [deliver](/tools/deliver) - App Store submission
+- [match](/tools/match) - Certificate synchronization
+- [pem](/tools/pem) - Push notification certificates
+
+## Documentation
+
+For complete API documentation, visit:
+- [spaceship.airforce](https://spaceship.airforce)
+- [RubyDoc](https://www.rubydoc.info/gems/fastlane)
+
+## Related Resources
+
+- [Apple Developer Portal](https://developer.apple.com)
+- [App Store Connect](https://appstoreconnect.apple.com)
+- [App Store Connect API Docs](https://developer.apple.com/documentation/appstoreconnectapi)

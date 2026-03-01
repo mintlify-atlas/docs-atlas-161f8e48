@@ -1,0 +1,498 @@
+---
+title: supply
+description: Upload Android apps and metadata to Google Play Store
+---
+
+## Overview
+
+supply is fastlane's tool for uploading Android apps and their metadata to the Google Play Store. It handles APKs, AABs, screenshots, and store listings.
+
+<Info>
+supply is the easiest way to automate your Google Play Store releases.
+</Info>
+
+## Installation
+
+supply is part of fastlane. Install it with:
+
+```bash
+fastlane supply
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Set up Google Play credentials">
+    Create a service account and download the JSON key file. See [Google Play setup guide](https://docs.fastlane.tools/getting-started/android/setup/).
+  </Step>
+  
+  <Step title="Initialize supply">
+    ```bash
+    fastlane supply init
+    ```
+    
+    This downloads your existing metadata into a `metadata/android` folder.
+  </Step>
+  
+  <Step title="Upload to Play Store">
+    ```bash
+    fastlane supply
+    ```
+  </Step>
+</Steps>
+
+## CLI Commands
+
+<CodeGroup>
+
+```bash Upload APK/AAB
+fastlane supply
+```
+
+```bash Initialize / Download metadata
+fastlane supply init
+```
+
+```bash Run with options
+fastlane supply --apk path/to/app.apk --track beta
+```
+
+</CodeGroup>
+
+## Authentication
+
+### Service Account JSON
+
+Use a Google Play service account:
+
+```ruby
+supply(
+  json_key: "./google-play-key.json",
+  package_name: "com.example.app"
+)
+```
+
+Or use JSON data directly:
+
+```ruby
+supply(
+  json_key_data: ENV["GOOGLE_PLAY_JSON_KEY_DATA"],
+  package_name: "com.example.app"
+)
+```
+
+## Key Options
+
+<ParamField path="package_name" type="string">
+  The package name of the application.
+  
+  ```ruby
+  supply(package_name: "com.example.app")
+  ```
+</ParamField>
+
+<ParamField path="json_key" type="string">
+  Path to the service account JSON file.
+  
+  ```ruby
+  supply(json_key: "./google-play-key.json")
+  ```
+</ParamField>
+
+<ParamField path="json_key_data" type="string">
+  Raw service account JSON data.
+  
+  ```ruby
+  supply(json_key_data: ENV["JSON_KEY_DATA"])
+  ```
+</ParamField>
+
+<ParamField path="apk" type="string">
+  Path to the APK file to upload.
+  
+  ```ruby
+  supply(apk: "./app/build/outputs/apk/release/app-release.apk")
+  ```
+</ParamField>
+
+<ParamField path="apk_paths" type="array">
+  Array of paths to APK files to upload.
+  
+  ```ruby
+  supply(apk_paths: [
+    "./app1.apk",
+    "./app2.apk"
+  ])
+  ```
+</ParamField>
+
+<ParamField path="aab" type="string">
+  Path to the AAB (Android App Bundle) file.
+  
+  ```ruby
+  supply(aab: "./app/build/outputs/bundle/release/app-release.aab")
+  ```
+</ParamField>
+
+<ParamField path="aab_paths" type="array">
+  Array of paths to AAB files to upload.
+  
+  ```ruby
+  supply(aab_paths: [
+    "./app1.aab",
+    "./app2.aab"
+  ])
+  ```
+</ParamField>
+
+<ParamField path="track" type="string" default="production">
+  The track to upload to (production, beta, alpha, internal).
+  
+  ```ruby
+  supply(track: "beta")
+  ```
+</ParamField>
+
+<ParamField path="release_status" type="string" default="completed">
+  Release status (completed, draft, halted, inProgress).
+  
+  ```ruby
+  supply(release_status: "draft")
+  ```
+</ParamField>
+
+<ParamField path="rollout" type="float">
+  The percentage of users to roll out to (0.0 to 1.0).
+  
+  ```ruby
+  supply(
+    track: "production",
+    rollout: 0.1  # 10% rollout
+  )
+  ```
+</ParamField>
+
+<ParamField path="metadata_path" type="string">
+  Path to the directory containing metadata files.
+  
+  ```ruby
+  supply(metadata_path: "./metadata/android")
+  ```
+</ParamField>
+
+<ParamField path="skip_upload_apk" type="boolean" default="false">
+  Whether to skip uploading APK.
+  
+  ```ruby
+  supply(skip_upload_apk: true)
+  ```
+</ParamField>
+
+<ParamField path="skip_upload_aab" type="boolean" default="false">
+  Whether to skip uploading AAB.
+  
+  ```ruby
+  supply(skip_upload_aab: true)
+  ```
+</ParamField>
+
+<ParamField path="skip_upload_metadata" type="boolean" default="false">
+  Whether to skip uploading metadata.
+  
+  ```ruby
+  supply(skip_upload_metadata: true)
+  ```
+</ParamField>
+
+<ParamField path="skip_upload_changelogs" type="boolean" default="false">
+  Whether to skip uploading changelogs.
+  
+  ```ruby
+  supply(skip_upload_changelogs: true)
+  ```
+</ParamField>
+
+<ParamField path="skip_upload_images" type="boolean" default="false">
+  Whether to skip uploading images.
+  
+  ```ruby
+  supply(skip_upload_images: true)
+  ```
+</ParamField>
+
+<ParamField path="skip_upload_screenshots" type="boolean" default="false">
+  Whether to skip uploading screenshots.
+  
+  ```ruby
+  supply(skip_upload_screenshots: true)
+  ```
+</ParamField>
+
+<ParamField path="track_promote_to" type="string">
+  The track to promote a release to.
+  
+  ```ruby
+  supply(
+    track: "beta",
+    track_promote_to: "production"
+  )
+  ```
+</ParamField>
+
+<ParamField path="validate_only" type="boolean" default="false">
+  Only validate changes without publishing.
+  
+  ```ruby
+  supply(validate_only: true)
+  ```
+</ParamField>
+
+<ParamField path="mapping" type="string">
+  Path to the mapping file (mapping.txt or symbols zip).
+  
+  ```ruby
+  supply(mapping: "./app/build/outputs/mapping/release/mapping.txt")
+  ```
+</ParamField>
+
+<ParamField path="mapping_paths" type="array">
+  Array of paths to mapping files.
+  
+  ```ruby
+  supply(mapping_paths: [
+    "./mapping1.txt",
+    "./mapping2.txt"
+  ])
+  ```
+</ParamField>
+
+<ParamField path="version_name" type="string">
+  Version name (used when uploading new APKs/AABs).
+  
+  ```ruby
+  supply(version_name: "1.2.0")
+  ```
+</ParamField>
+
+<ParamField path="version_code" type="integer">
+  Version code (used when updating rollout or promoting versions).
+  
+  ```ruby
+  supply(version_code: 42)
+  ```
+</ParamField>
+
+<ParamField path="in_app_update_priority" type="integer">
+  In-app update priority for new APKs (0-5).
+  
+  ```ruby
+  supply(in_app_update_priority: 3)
+  ```
+</ParamField>
+
+## Using with fastlane
+
+### Basic Upload
+
+```ruby
+lane :deploy do
+  gradle(task: "bundle")
+  supply
+end
+```
+
+### Upload to Beta Track
+
+```ruby
+lane :beta do
+  gradle(
+    task: "bundle",
+    build_type: "Release"
+  )
+  
+  supply(
+    track: "beta",
+    aab: "./app/build/outputs/bundle/release/app-release.aab"
+  )
+end
+```
+
+### Production Release with Rollout
+
+```ruby
+lane :production do
+  gradle(task: "bundle")
+  
+  supply(
+    track: "production",
+    rollout: 0.1,  # Start with 10%
+    aab: "./app/build/outputs/bundle/release/app-release.aab"
+  )
+end
+```
+
+### Promote Beta to Production
+
+```ruby
+lane :promote_to_production do
+  supply(
+    track: "beta",
+    track_promote_to: "production",
+    skip_upload_apk: true,
+    skip_upload_aab: true
+  )
+end
+```
+
+### Upload Metadata Only
+
+```ruby
+lane :update_metadata do
+  supply(
+    skip_upload_apk: true,
+    skip_upload_aab: true,
+    skip_upload_screenshots: true
+  )
+end
+```
+
+## Metadata Management
+
+### Folder Structure
+
+supply organizes metadata by locale:
+
+```
+metadata/android/
+├── en-US/
+│   ├── title.txt
+│   ├── short_description.txt
+│   ├── full_description.txt
+│   ├── video.txt
+│   ├── images/
+│   │   ├── featureGraphic.png
+│   │   ├── icon.png
+│   │   ├── phoneScreenshots/
+│   │   ├── sevenInchScreenshots/
+│   │   ├── tenInchScreenshots/
+│   │   └── tvScreenshots/
+│   └── changelogs/
+│       └── 100.txt
+└── de-DE/
+    └── ...
+```
+
+### Download Existing Metadata
+
+```bash
+fastlane supply init
+```
+
+### Metadata Files
+
+- `title.txt` - App title (50 characters max)
+- `short_description.txt` - Short description (80 characters max)
+- `full_description.txt` - Full description (4000 characters max)
+- `video.txt` - YouTube video URL
+
+### Changelogs
+
+Create changelog files named by version code:
+
+```
+metadata/android/en-US/changelogs/
+├── 100.txt
+├── 101.txt
+└── 102.txt
+```
+
+## Supplyfile
+
+Create a `Supplyfile` for persistent configuration:
+
+```ruby
+# Supplyfile
+
+json_key "./google-play-key.json"
+package_name "com.example.app"
+
+track "production"
+release_status "completed"
+
+metadata_path "./metadata/android"
+
+skip_upload_images false
+skip_upload_screenshots false
+skip_upload_metadata false
+```
+
+## Environment Variables
+
+<ResponseField name="SUPPLY_JSON_KEY" type="string">
+  Path to service account JSON file
+</ResponseField>
+
+<ResponseField name="SUPPLY_JSON_KEY_DATA" type="string">
+  Raw service account JSON data
+</ResponseField>
+
+<ResponseField name="SUPPLY_PACKAGE_NAME" type="string">
+  The package name of your app
+</ResponseField>
+
+<ResponseField name="SUPPLY_TRACK" type="string">
+  The track to upload to
+</ResponseField>
+
+<ResponseField name="SUPPLY_APK" type="string">
+  Path to the APK file
+</ResponseField>
+
+<ResponseField name="SUPPLY_AAB" type="string">
+  Path to the AAB file
+</ResponseField>
+
+<ResponseField name="SUPPLY_METADATA_PATH" type="string">
+  Path to metadata directory
+</ResponseField>
+
+## Tips & Best Practices
+
+<Tip>
+**Use AAB over APK**: Android App Bundles reduce download size and are required for new apps.
+</Tip>
+
+<Warning>
+**Protect your service account**: Keep the JSON key file secure and never commit it to version control.
+</Warning>
+
+<Tip>
+**Start with staged rollout**: Use `rollout: 0.1` to release to 10% of users first, then gradually increase.
+</Tip>
+
+<Check>
+**Upload ProGuard mapping**: Include mapping files for better crash reports in the Play Console.
+</Check>
+
+## Troubleshooting
+
+### Authentication failed
+
+Verify your service account has the correct permissions in the Google Play Console.
+
+### Package name mismatch
+
+Ensure the package name matches your app in the Play Console:
+
+```ruby
+supply(package_name: "com.example.app")
+```
+
+### Track not found
+
+Make sure the track exists. Valid tracks: `production`, `beta`, `alpha`, `internal`.
+
+## Related Tools
+
+- [screengrab](/tools/screengrab) - Automate Android screenshots
+- [gradle](/actions/gradle) - Build Android apps

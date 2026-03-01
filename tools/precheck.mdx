@@ -1,0 +1,467 @@
+---
+title: precheck
+description: Check your app's metadata for App Store review issues before submission
+---
+
+## Overview
+
+precheck analyzes your app's metadata and identifies potential issues that could cause rejection during App Store review. It checks for common problems like placeholder text, test words, negative sentiment, and more.
+
+<Info>
+precheck helps you catch App Store review issues early, saving time and preventing rejections.
+</Info>
+
+## Installation
+
+precheck is part of fastlane. Install it with:
+
+```bash
+fastlane precheck
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Run precheck">
+    ```bash
+    fastlane precheck
+    ```
+    
+    precheck will analyze your app's metadata and flag any potential issues.
+  </Step>
+  
+  <Step title="Review results">
+    Fix any errors or warnings before submitting to the App Store.
+  </Step>
+</Steps>
+
+## What precheck Validates
+
+precheck runs multiple validation rules:
+
+<AccordionGroup>
+  <Accordion title="Negative Apple Sentiment">
+    Detects negative mentions of Apple or competitors.
+    
+    Examples:
+    - "Better than Apple's app"
+    - "Unlike Apple, we..."
+  </Accordion>
+  
+  <Accordion title="Placeholder Words">
+    Finds placeholder text that should be replaced.
+    
+    Examples:
+    - "Lorem ipsum"
+    - "[Insert text here]"
+    - "TODO"
+  </Accordion>
+  
+  <Accordion title="Other Platforms">
+    Identifies mentions of competing platforms.
+    
+    Examples:
+    - "Also available on Android"
+    - "Coming soon to Windows"
+  </Accordion>
+  
+  <Accordion title="Future Functionality">
+    Detects promises of future features.
+    
+    Examples:
+    - "Coming soon"
+    - "Future update will include"
+  </Accordion>
+  
+  <Accordion title="Test Words">
+    Finds test-related words that shouldn't be in production.
+    
+    Examples:
+    - "Test"
+    - "Demo"
+    - "Sample"
+  </Accordion>
+  
+  <Accordion title="Curse Words">
+    Detects inappropriate language.
+  </Accordion>
+  
+  <Accordion title="Free Stuff IAP">
+    Checks for mentions of free items that might conflict with IAP.
+    
+    Examples:
+    - "Get coins for free"
+    - "Free premium subscription"
+  </Accordion>
+  
+  <Accordion title="Copyright Date">
+    Validates copyright year is current.
+    
+    Example:
+    - "© 2020" (when current year is 2025)
+  </Accordion>
+  
+  <Accordion title="Unreachable URLs">
+    Verifies all URLs in metadata are accessible.
+  </Accordion>
+</AccordionGroup>
+
+## CLI Commands
+
+<CodeGroup>
+
+```bash Check metadata
+fastlane precheck
+```
+
+```bash Check specific app
+fastlane precheck -a com.example.app
+```
+
+```bash Initialize Precheckfile
+fastlane precheck init
+```
+
+</CodeGroup>
+
+## Key Options
+
+<ParamField path="app_identifier" type="string" required>
+  The bundle identifier of your app.
+  
+  ```ruby
+  precheck(app_identifier: "com.example.app")
+  ```
+</ParamField>
+
+<ParamField path="username" type="string">
+  Your Apple ID username.
+  
+  ```ruby
+  precheck(username: "user@example.com")
+  ```
+</ParamField>
+
+<ParamField path="team_id" type="string">
+  The ID of your App Store Connect team.
+  
+  ```ruby
+  precheck(team_id: "123456")
+  ```
+</ParamField>
+
+<ParamField path="team_name" type="string">
+  The name of your App Store Connect team.
+  
+  ```ruby
+  precheck(team_name: "Company Inc")
+  ```
+</ParamField>
+
+<ParamField path="platform" type="string" default="ios">
+  The platform to check (ios, appletvos, tvos, or osx).
+  
+  ```ruby
+  precheck(platform: "ios")
+  ```
+</ParamField>
+
+<ParamField path="default_rule_level" type="symbol" default=":error">
+  Default rule level for validation (`:error`, `:warn`, or `:skip`).
+  
+  ```ruby
+  precheck(default_rule_level: :warn)
+  ```
+</ParamField>
+
+<ParamField path="include_in_app_purchases" type="boolean" default="true">
+  Should check in-app purchase metadata?
+  
+  ```ruby
+  precheck(include_in_app_purchases: true)
+  ```
+</ParamField>
+
+<ParamField path="use_live" type="boolean" default="false">
+  Check the live app version instead of the edit version.
+  
+  ```ruby
+  precheck(use_live: true)
+  ```
+</ParamField>
+
+## Configuration
+
+Create a `Precheckfile` to customize validation rules:
+
+```ruby
+app_identifier "com.example.app"
+username "user@example.com"
+
+# Customize rule levels
+negative_apple_sentiment(level: :warn)
+placeholder_text(level: :error)
+other_platforms(level: :skip)
+future_functionality(level: :error)
+test_words(level: :error)
+curse_words(level: :error)
+free_stuff_in_iap(level: :warn)
+copyright_date(level: :warn)
+unreachable_urls(level: :error)
+
+# Custom text rules
+custom_text(
+  data: ["MyCompany", "Internal"],
+  level: :error
+)
+```
+
+## Using with fastlane
+
+### Basic Usage
+
+```ruby
+lane :check_metadata do
+  precheck
+end
+```
+
+### Before Submission
+
+```ruby
+lane :release do
+  # Build and upload
+  build_app
+  upload_to_testflight
+  
+  # Check metadata
+  precheck(
+    app_identifier: "com.example.app",
+    include_in_app_purchases: true
+  )
+  
+  # If no issues, submit for review
+  deliver(submit_for_review: true)
+end
+```
+
+### Custom Rule Levels
+
+```ruby
+lane :check_with_warnings do
+  precheck(
+    app_identifier: "com.example.app",
+    default_rule_level: :warn,
+    negative_apple_sentiment: :error,
+    placeholder_text: :error
+  )
+end
+```
+
+### Check Multiple Apps
+
+```ruby
+lane :check_all_apps do
+  ["com.example.app", "com.example.app2"].each do |identifier|
+    precheck(
+      app_identifier: identifier,
+      include_in_app_purchases: true
+    )
+  end
+end
+```
+
+## Rule Levels
+
+Each rule can be set to different severity levels:
+
+<ResponseField name="error" type="level">
+  Fails the precheck run. Must be fixed before proceeding.
+</ResponseField>
+
+<ResponseField name="warn" type="level">
+  Shows a warning but doesn't fail. Should be reviewed.
+</ResponseField>
+
+<ResponseField name="skip" type="level">
+  Disables the rule completely.
+</ResponseField>
+
+## Custom Text Rules
+
+Add custom text patterns to check:
+
+```ruby
+# In Precheckfile
+custom_text(
+  data: [
+    "CONFIDENTIAL",
+    "INTERNAL USE ONLY",
+    "Do not distribute",
+    "Beta version"
+  ],
+  level: :error
+)
+```
+
+In Fastfile:
+
+```ruby
+precheck(
+  custom_text: {
+    data: ["CONFIDENTIAL", "INTERNAL"],
+    level: :error
+  }
+)
+```
+
+## App Store Connect API
+
+precheck supports the App Store Connect API for authentication:
+
+```ruby
+precheck(
+  api_key_path: "./AuthKey.json"
+)
+```
+
+Or use a hash:
+
+```ruby
+precheck(
+  api_key: {
+    key_id: "ABC123",
+    issuer_id: "XYZ789",
+    key_filepath: "./AuthKey_ABC123.p8"
+  }
+)
+```
+
+## Environment Variables
+
+<ResponseField name="PRECHECK_APP_IDENTIFIER" type="string">
+  The bundle identifier of your app
+</ResponseField>
+
+<ResponseField name="PRECHECK_USERNAME" type="string">
+  Your Apple ID username
+</ResponseField>
+
+<ResponseField name="PRECHECK_TEAM_ID" type="string">
+  App Store Connect team ID
+</ResponseField>
+
+<ResponseField name="PRECHECK_TEAM_NAME" type="string">
+  App Store Connect team name
+</ResponseField>
+
+<ResponseField name="PRECHECK_PLATFORM" type="string">
+  Platform to check (ios, appletvos, tvos, osx)
+</ResponseField>
+
+<ResponseField name="PRECHECK_INCLUDE_IN_APP_PURCHASES" type="boolean">
+  Check in-app purchase metadata
+</ResponseField>
+
+<ResponseField name="PRECHECK_USE_LIVE" type="boolean">
+  Check live app version
+</ResponseField>
+
+## Output Examples
+
+### Successful Check
+
+```
+[precheck] ✅ No potential problems found! 🎉
+```
+
+### Issues Found
+
+```
+[precheck] ❌ Found 3 potential problems:
+
+[ERROR] Placeholder text found:
+  - App Description: "TODO: Add description"
+  - What's New: "Coming soon"
+
+[WARN] Negative Apple sentiment detected:
+  - App Description: "Better than Apple's Maps"
+
+[precheck] Please fix these issues before submitting to the App Store
+```
+
+## Tips & Best Practices
+
+<Tip>
+**Run before every submission**: Make precheck part of your release process to catch issues early.
+</Tip>
+
+<Warning>
+**False positives**: Some rules may flag legitimate text. Customize rule levels as needed.
+</Warning>
+
+<Tip>
+**Check IAPs**: Enable `include_in_app_purchases` to validate in-app purchase metadata too.
+</Tip>
+
+<Check>
+**Use in CI**: Run precheck in your CI pipeline to automatically validate metadata changes.
+</Check>
+
+## Troubleshooting
+
+### No app version found
+
+Make sure you have an app version in "Prepare for Submission" state.
+
+### False positive
+
+Adjust the rule level:
+
+```ruby
+precheck(
+  negative_apple_sentiment: :warn  # or :skip
+)
+```
+
+### Cannot access metadata
+
+Verify your credentials and team ID:
+
+```ruby
+precheck(
+  username: "user@example.com",
+  team_id: "123456"
+)
+```
+
+## CI/CD Integration
+
+```ruby
+lane :validate_metadata do
+  precheck(
+    app_identifier: ENV["APP_IDENTIFIER"],
+    username: ENV["APPLE_ID"],
+    team_id: ENV["TEAM_ID"],
+    default_rule_level: :error,
+    include_in_app_purchases: true
+  )
+end
+```
+
+In your CI configuration:
+
+```yaml
+- name: Check App Metadata
+  run: fastlane validate_metadata
+  env:
+    APP_IDENTIFIER: com.example.app
+    APPLE_ID: ${{ secrets.APPLE_ID }}
+    TEAM_ID: ${{ secrets.TEAM_ID }}
+```
+
+## Related Tools
+
+- [deliver](/tools/deliver) - Upload metadata to App Store Connect
+- [pilot](/tools/pilot) - Manage TestFlight
+- [scan](/tools/scan) - Run tests before submission

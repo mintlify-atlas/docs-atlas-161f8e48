@@ -1,0 +1,623 @@
+---
+title: Lanes
+description: Understanding lanes - the building blocks of fastlane automation
+---
+
+Lanes are the fundamental building blocks of fastlane automation. A lane is a named workflow that executes a series of actions in sequence. Think of lanes as recipes that define the steps needed to accomplish a specific task like running tests, building your app, or deploying to the App Store.
+
+## What is a Lane?
+
+A lane is a method defined in your Fastfile that contains a series of actions. When you run `fastlane beta`, fastlane looks for a lane named `beta` and executes all the actions within it.
+
+```ruby
+lane :beta do
+  increment_build_number
+  build_app(scheme: "MyApp")
+  upload_to_testflight
+end
+```
+
+<Note>
+Lane names must be symbols (starting with `:`) and cannot contain spaces. Use underscores instead: `:deploy_beta` not `:deploy beta`.
+</Note>
+
+## Lane Syntax
+
+### Basic Lane
+
+```ruby
+lane :test do
+  scan(scheme: "MyApp")
+end
+```
+
+### Lane with Description
+
+Descriptions are displayed when running `fastlane lanes` and serve as documentation:
+
+```ruby
+desc "Run all unit and UI tests"
+lane :test do
+  scan(scheme: "MyApp")
+end
+```
+
+You can provide multiple description lines:
+
+```ruby
+desc "Submit a new Beta Build to Apple TestFlight"
+desc "This will also make sure the profile is up to date"
+lane :beta do
+  match(type: "appstore")
+  build_app
+  upload_to_testflight
+end
+```
+
+### Lane with Parameters
+
+Lanes can accept parameters, allowing you to customize behavior:
+
+<Tabs>
+  <Tab title="Hash Parameters">
+    ```ruby
+    lane :deploy do |options|
+      environment = options[:env] || "staging"
+      
+      build_app(scheme: "MyApp")
+      
+      case environment
+      when "staging"
+        upload_to_testflight
+      when "production"
+        upload_to_app_store
+      end
+    end
+    ```
+    
+    Run with: `fastlane deploy env:production`
+  </Tab>
+  <Tab title="Keyword Parameters">
+    ```ruby
+    lane :deploy do |env: "staging", skip_tests: false|
+      scan unless skip_tests
+      
+      build_app(scheme: "MyApp")
+      
+      if env == "production"
+        upload_to_app_store
+      else
+        upload_to_testflight
+      end
+    end
+    ```
+    
+    Run with: `fastlane deploy env:production skip_tests:true`
+  </Tab>
+</Tabs>
+
+## Platform-Specific Lanes
+
+Organize lanes by platform using platform blocks. This is especially useful for cross-platform projects:
+
+```ruby
+platform :ios do
+  desc "Build iOS app"
+  lane :build do
+    gym(
+      scheme: "MyApp-iOS",
+      export_method: "app-store"
+    )
+  end
+  
+  lane :test do
+    scan(scheme: "MyApp-iOS")
+  end
+end
+
+platform :android do
+  desc "Build Android app"
+  lane :build do
+    gradle(
+      task: "assembleRelease",
+      project_dir: "android/"
+    )
+  end
+  
+  lane :test do
+    gradle(
+      task: "test",
+      project_dir: "android/"
+    )
+  end
+end
+
+platform :mac do
+  desc "Build macOS app"
+  lane :build do
+    gym(
+      scheme: "MyApp-Mac",
+      catalyst_platform: "macos"
+    )
+  end
+end
+```
+
+<Accordion title="Supported Platforms">
+  fastlane supports the following platform blocks:
+  - `:ios` - iOS apps
+  - `:android` - Android apps
+  - `:mac` - macOS apps
+  
+  Run platform-specific lanes with: `fastlane ios build` or `fastlane android build`
+</Accordion>
+
+## Calling Lanes from Other Lanes
+
+You can call lanes from within other lanes to create reusable workflows:
+
+### Basic Lane Calling
+
+```ruby
+lane :prepare do
+  ensure_git_status_clean
+  increment_build_number
+  commit_version_bump
+end
+
+lane :beta do
+  prepare  # Call the prepare lane
+  build_app
+  upload_to_testflight
+end
+
+lane :release do
+  prepare  # Reuse the same preparation
+  build_app
+  upload_to_app_store
+end
+```
+
+### Calling with Parameters
+
+```ruby
+lane :build do |options|
+  configuration = options[:configuration] || "Release"
+  
+  build_app(
+    scheme: "MyApp",
+    configuration: configuration
+  )
+end
+
+lane :beta do
+  build(configuration: "Beta")  # Call with parameters
+  upload_to_testflight
+end
+```
+
+### Cross-Platform Lane Calling
+
+```ruby
+platform :ios do
+  lane :deploy do
+    build_app
+    upload_to_testflight
+  end
+end
+
+platform :android do
+  lane :deploy do
+    gradle(task: "assembleRelease")
+    upload_to_play_store
+  end
+end
+
+# Call platform-specific lanes
+lane :deploy_all do
+  ios_deploy     # Calls the iOS deploy lane
+  android_deploy # Calls the Android deploy lane
+end
+```
+
+## Private Lanes
+
+Private lanes can only be called from other lanes, not from the command line. Use them to organize shared logic:
+
+```ruby
+lane :beta do
+  prepare_release
+  build_app
+  upload_to_testflight
+end
+
+lane :production do
+  prepare_release
+  build_app
+  upload_to_app_store
+end
+
+private_lane :prepare_release do
+  ensure_git_status_clean
+  increment_build_number
+  commit_version_bump(message: "Version Bump")
+  add_git_tag
+end
+```
+
+<Warning>
+Private lanes cannot be run directly via `fastlane private_lane_name`. They must be called from within other lanes.
+</Warning>
+
+## Lifecycle Hooks
+
+Lanes support hooks that execute at specific points in the workflow:
+
+### before_all
+
+Runs once before the first lane executes:
+
+```ruby
+before_all do |lane, options|
+  ensure_git_status_clean
+  ensure_git_branch(branch: "main")
+  git_pull
+end
+```
+
+### before_each
+
+Runs before each lane executes (including called lanes):
+
+```ruby
+before_each do |lane, options|
+  UI.message("Starting lane: #{lane}")
+  # Log start time, send notification, etc.
+end
+```
+
+### after_all
+
+Runs after all lanes complete successfully:
+
+```ruby
+after_all do |lane, options|
+  slack(
+    message: "Successfully completed #{lane}",
+    success: true
+  )
+  notification(subtitle: "Fastlane", message: "Finished #{lane}")
+end
+```
+
+### after_each
+
+Runs after each lane completes successfully:
+
+```ruby
+after_each do |lane, options|
+  UI.success("Completed lane: #{lane}")
+end
+```
+
+### error
+
+Runs when any lane fails:
+
+```ruby
+error do |lane, exception, options|
+  UI.error("Error in #{lane}: #{exception.message}")
+  
+  slack(
+    message: "#{lane} failed: #{exception.message}",
+    success: false,
+    channel: "#builds"
+  )
+  
+  # Clean up on error
+  reset_git_repo(skip_clean: true)
+end
+```
+
+### Platform-Specific Hooks
+
+Hooks can be scoped to specific platforms:
+
+```ruby
+platform :ios do
+  before_all do
+    cocoapods
+    increment_build_number
+  end
+  
+  after_all do |lane|
+    clean_build_artifacts
+  end
+  
+  error do |lane, exception|
+    reset_git_repo
+  end
+  
+  lane :beta do
+    build_app
+    upload_to_testflight
+  end
+end
+
+platform :android do
+  before_all do
+    gradle(task: "clean")
+  end
+  
+  lane :beta do
+    gradle(task: "assembleRelease")
+    upload_to_play_store(track: "beta")
+  end
+end
+```
+
+## Reserved Lane Names
+
+Some lane names are reserved and cannot be used:
+
+<Warning>
+  The following names are reserved and will cause errors:
+  - `run`, `init`, `new_action`, `lanes`, `list`, `docs`, `action`, `actions`
+  - `enable_auto_complete`, `new_plugin`, `add_plugin`, `install_plugins`
+  - `update_plugins`, `search_plugins`, `help`, `env`, `update_fastlane`
+</Warning>
+
+Additionally, it's not recommended to use lane names that match fastlane tool names (like `gym`, `scan`, `match`, etc.), though these are allowed.
+
+## Lane Return Values
+
+Lanes can return values that can be used by other lanes:
+
+```ruby
+lane :get_version do
+  version = get_version_number(xcodeproj: "MyApp.xcodeproj")
+  build = get_build_number(xcodeproj: "MyApp.xcodeproj")
+  
+  "#{version} (#{build})"
+end
+
+lane :changelog do
+  version = get_version
+  changelog_from_git_commits(tag_match_pattern: "#{version}*")
+end
+```
+
+## Advanced Lane Patterns
+
+### Conditional Execution
+
+```ruby
+lane :deploy do |options|
+  if Helper.ci?
+    # CI-specific logic
+    UI.message("Running on CI")
+    setup_ci
+  end
+  
+  # Check if we should skip tests
+  unless options[:skip_tests]
+    scan
+  end
+  
+  build_app
+  
+  # Deploy based on environment
+  case ENV["DEPLOY_ENV"]
+  when "production"
+    upload_to_app_store
+  when "staging"
+    upload_to_testflight
+  else
+    UI.error("Unknown environment: #{ENV['DEPLOY_ENV']}")
+  end
+end
+```
+
+### Loop-Based Lanes
+
+```ruby
+lane :build_all_configurations do
+  ["Debug", "Release", "Beta"].each do |config|
+    build_app(
+      scheme: "MyApp",
+      configuration: config,
+      output_name: "MyApp-#{config}.ipa"
+    )
+  end
+end
+```
+
+### Error Recovery
+
+```ruby
+lane :robust_test do
+  retries = 0
+  max_retries = 3
+  
+  begin
+    scan(scheme: "MyApp")
+  rescue => exception
+    retries += 1
+    if retries <= max_retries
+      UI.important("Test failed, retrying (#{retries}/#{max_retries})...")
+      retry
+    else
+      UI.error("Tests failed after #{max_retries} attempts")
+      raise exception
+    end
+  end
+end
+```
+
+## Best Practices
+
+<Accordion title="Keep Lanes Focused">
+  Each lane should do one thing well. Break complex workflows into multiple lanes:
+  
+  ```ruby
+  # Good: focused lanes
+  lane :test do
+    scan
+  end
+  
+  lane :build do
+    build_app
+  end
+  
+  lane :deploy do
+    test
+    build
+    upload_to_testflight
+  end
+  
+  # Avoid: doing too much in one lane
+  lane :everything do
+    run_tests
+    build_app
+    update_docs
+    send_emails
+    deploy_backend
+    # ... 50 more actions
+  end
+  ```
+</Accordion>
+
+<Accordion title="Use Descriptive Names">
+  Lane names should clearly indicate what they do:
+  
+  ```ruby
+  # Good
+  lane :deploy_to_testflight
+  lane :run_ui_tests
+  lane :update_app_store_metadata
+  
+  # Bad
+  lane :do_stuff
+  lane :lane1
+  lane :temp
+  ```
+</Accordion>
+
+<Accordion title="Document with Descriptions">
+  Always add descriptions to explain what lanes do:
+  
+  ```ruby
+  desc "Run all tests including unit and UI tests"
+  desc "This will also generate code coverage reports"
+  lane :test do
+    scan(code_coverage: true)
+  end
+  ```
+</Accordion>
+
+<Accordion title="Handle Parameters Gracefully">
+  Provide sensible defaults for lane parameters:
+  
+  ```ruby
+  lane :deploy do |options|
+    environment = options[:env] || "staging"
+    skip_tests = options[:skip_tests] || false
+    
+    scan unless skip_tests
+    
+    build_app
+    
+    if environment == "production"
+      upload_to_app_store
+    else
+      upload_to_testflight
+    end
+  end
+  ```
+</Accordion>
+
+## Complete Example
+
+Here's a real-world example from fastlane's own Fastfile showing multiple concepts:
+
+```ruby
+platform :ios do
+  before_all do
+    ensure_git_status_clean
+  end
+  
+  after_all do |lane|
+    notification(
+      subtitle: "fastlane",
+      message: "Successfully completed #{lane}"
+    )
+  end
+  
+  error do |lane, exception|
+    slack(
+      message: exception.message,
+      success: false
+    )
+  end
+  
+  desc "Run all tests for the iOS app"
+  lane :test do
+    scan(
+      scheme: "fastlane",
+      devices: ["iPhone 14", "iPad Pro (12.9-inch)"]
+    )
+  end
+  
+  desc "Submit a new Beta Build to Apple TestFlight"
+  desc "This will also make sure the profile is up to date"
+  lane :beta do |options|
+    match(type: "appstore")
+    
+    increment_build_number unless options[:skip_version_bump]
+    
+    build_app(scheme: "fastlane")
+    
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+    
+    unless options[:skip_git]
+      commit_version_bump(message: "Version Bump by fastlane")
+      push_to_git_remote
+    end
+  end
+  
+  desc "Deploy a new version to the App Store"
+  lane :release do
+    prepare_release
+    capture_screenshots
+    build_and_upload
+  end
+  
+  private_lane :prepare_release do
+    ensure_git_branch(branch: "main")
+    increment_version_number
+    increment_build_number
+  end
+  
+  private_lane :build_and_upload do
+    build_app(scheme: "fastlane")
+    upload_to_app_store(
+      submit_for_review: true,
+      automatic_release: false,
+      force: true
+    )
+  end
+end
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Actions" icon="bolt" href="/concepts/actions">
+    Learn about the actions you can use in lanes
+  </Card>
+  <Card title="Fastfile" icon="file" href="/concepts/fastfile">
+    Understand the Fastfile structure
+  </Card>
+</CardGroup>

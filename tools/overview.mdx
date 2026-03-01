@@ -1,0 +1,272 @@
+---
+title: Tools Overview
+description: Standalone command-line tools for iOS and Android development automation
+---
+
+## Overview
+
+fastlane includes a suite of powerful standalone command-line tools that can be used independently or as part of your fastlane lanes. Each tool focuses on a specific aspect of app development and deployment.
+
+<Info>
+All tools can be used standalone via CLI or integrated into your Fastfile as actions.
+</Info>
+
+## iOS & macOS Tools
+
+<CardGroup cols={2}>
+  <Card title="deliver" icon="app-store-ios" href="/tools/deliver">
+    Upload screenshots, metadata, and binaries to App Store Connect
+  </Card>
+  
+  <Card title="gym" icon="hammer" href="/tools/gym">
+    Build and package iOS, macOS, tvOS, and watchOS apps
+  </Card>
+  
+  <Card title="scan" icon="flask" href="/tools/scan">
+    Run tests for your iOS and Mac apps with ease
+  </Card>
+  
+  <Card title="match" icon="lock" href="/tools/match">
+    Sync code signing certificates and profiles across your team
+  </Card>
+  
+  <Card title="snapshot" icon="camera" href="/tools/snapshot">
+    Automate taking localized screenshots of your iOS app
+  </Card>
+  
+  <Card title="frameit" icon="frame" href="/tools/frameit">
+    Put your screenshots into beautiful device frames
+  </Card>
+  
+  <Card title="pem" icon="bell" href="/tools/pem">
+    Automatically generate and renew push notification profiles
+  </Card>
+  
+  <Card title="sigh" icon="certificate" href="/tools/sigh">
+    Create, renew, download and repair provisioning profiles
+  </Card>
+  
+  <Card title="cert" icon="key" href="/tools/cert">
+    Automatically create and maintain iOS code signing certificates
+  </Card>
+  
+  <Card title="pilot" icon="plane" href="/tools/pilot">
+    Manage TestFlight builds and testers
+  </Card>
+  
+  <Card title="produce" icon="plus" href="/tools/produce">
+    Create new iOS apps on App Store Connect and Developer Portal
+  </Card>
+  
+  <Card title="precheck" icon="check" href="/tools/precheck">
+    Check your app's metadata before submitting to review
+  </Card>
+</CardGroup>
+
+## Android Tools
+
+<CardGroup cols={2}>
+  <Card title="supply" icon="google-play" href="/tools/supply">
+    Upload Android apps and metadata to Google Play Store
+  </Card>
+  
+  <Card title="screengrab" icon="mobile" href="/tools/screengrab">
+    Automate taking localized screenshots of your Android app
+  </Card>
+</CardGroup>
+
+## Cross-Platform Tools
+
+<CardGroup cols={2}>
+  <Card title="spaceship" icon="rocket" href="/tools/spaceship">
+    Ruby library to access Apple Developer Center and App Store Connect APIs
+  </Card>
+</CardGroup>
+
+## How Tools Work Together
+
+### Complete iOS Release Pipeline
+
+```ruby
+lane :release do
+  # 1. Sync code signing
+  match(type: "appstore")
+  
+  # 2. Run tests
+  scan
+  
+  # 3. Take screenshots
+  snapshot
+  
+  # 4. Frame screenshots
+  frameit
+  
+  # 5. Build the app
+  gym
+  
+  # 6. Upload to App Store
+  deliver
+end
+```
+
+### TestFlight Beta Pipeline
+
+```ruby
+lane :beta do
+  # 1. Get certificates
+  match(type: "appstore")
+  
+  # 2. Build the app
+  gym
+  
+  # 3. Upload to TestFlight
+  pilot
+end
+```
+
+### Android Release Pipeline
+
+```ruby
+lane :android_release do
+  # 1. Take screenshots
+  screengrab
+  
+  # 2. Upload to Play Store
+  supply
+end
+```
+
+## Tools vs Actions
+
+### Standalone Tools
+
+Tools can be run directly from the command line:
+
+```bash
+fastlane gym
+fastlane scan
+fastlane match appstore
+fastlane deliver
+```
+
+### As fastlane Actions
+
+The same tools can be used as actions in your Fastfile:
+
+```ruby
+lane :build do
+  gym(scheme: "MyApp")
+  scan(scheme: "MyApp")
+end
+```
+
+### Naming Conventions
+
+Some tools have action aliases:
+
+- `gym` → `build_app` or `build_ios_app`
+- `scan` → `run_tests`
+- `snapshot` → `capture_screenshots`
+- `deliver` → `upload_to_app_store`
+- `pilot` → `upload_to_testflight`
+- `supply` → `upload_to_play_store`
+
+## When to Use Which Tool
+
+<AccordionGroup>
+  <Accordion title="Building Apps">
+    - **gym**: Build iOS, macOS, tvOS, watchOS apps
+    - Generates `.ipa` or `.pkg` files
+    - Handles code signing automatically
+  </Accordion>
+  
+  <Accordion title="Testing">
+    - **scan**: Run unit and UI tests
+    - Generate test reports (HTML, JUnit, JSON)
+    - Perfect for CI/CD integration
+  </Accordion>
+  
+  <Accordion title="Code Signing">
+    - **match**: Team-wide certificate sync (recommended)
+    - **cert**: Individual certificate management
+    - **sigh**: Provisioning profile management
+  </Accordion>
+  
+  <Accordion title="App Store & TestFlight">
+    - **deliver**: Upload to App Store with metadata
+    - **pilot**: Upload to TestFlight
+    - **precheck**: Validate metadata before submission
+  </Accordion>
+  
+  <Accordion title="Screenshots">
+    - **snapshot**: Capture iOS screenshots automatically
+    - **screengrab**: Capture Android screenshots
+    - **frameit**: Add device frames to screenshots
+  </Accordion>
+  
+  <Accordion title="App Management">
+    - **produce**: Create new apps in portals
+    - **pem**: Manage push certificates
+    - **spaceship**: Direct API access (advanced)
+  </Accordion>
+  
+  <Accordion title="Android">
+    - **supply**: Upload APK/AAB to Play Store
+    - **screengrab**: Take Android screenshots
+  </Accordion>
+</AccordionGroup>
+
+## Configuration Files
+
+Most tools support configuration files:
+
+- **Deliverfile** - deliver configuration
+- **Gymfile** - gym build settings
+- **Scanfile** - scan test settings
+- **Matchfile** - match certificate settings
+- **Snapfile** - snapshot screenshot settings
+- **Screengrabfile** - screengrab settings
+- **Supplyfile** - supply upload settings
+
+Create with `fastlane [tool] init`:
+
+```bash
+fastlane gym init
+fastlane scan init
+fastlane match init
+```
+
+## Environment Variables
+
+All tools support environment variables for configuration:
+
+```bash
+# Example: Configure gym via environment
+export GYM_SCHEME="MyApp"
+export GYM_OUTPUT_DIRECTORY="./build"
+fastlane gym
+```
+
+See individual tool documentation for specific environment variables.
+
+## Getting Help
+
+Each tool has built-in help:
+
+```bash
+fastlane [tool] --help
+```
+
+Examples:
+
+```bash
+fastlane gym --help
+fastlane scan --help
+fastlane match --help
+```
+
+## Related Resources
+
+- [Actions](/actions) - Use tools as fastlane actions
+- [Best Practices](/best-practices) - Recommended workflows
+- [CI Integration](/best-practices/continuous-integration) - Using tools in CI/CD

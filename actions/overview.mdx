@@ -1,0 +1,240 @@
+---
+title: Actions Overview
+description: Understanding and using fastlane actions
+---
+
+## What are Actions?
+
+Actions are the building blocks of fastlane lanes. Each action performs a specific task in your development workflow, such as building your app, running tests, or uploading to the App Store.
+
+<Note>
+Actions are reusable components that can be chained together in lanes to create powerful automation workflows.
+</Note>
+
+## Using Actions in Lanes
+
+Actions are called within lanes in your `Fastfile`. Here's a simple example:
+
+```ruby
+lane :beta do
+  increment_build_number
+  build_app(scheme: "MyApp")
+  upload_to_testflight
+end
+```
+
+Each line (`increment_build_number`, `build_app`, `upload_to_testflight`) is an action call.
+
+### Action Parameters
+
+Most actions accept parameters to customize their behavior:
+
+```ruby
+build_app(
+  scheme: "MyApp",
+  workspace: "MyApp.xcworkspace",
+  configuration: "Release",
+  clean: true
+)
+```
+
+### Action Return Values
+
+Many actions return values that can be used in your lane:
+
+```ruby
+version = get_version_number(xcodeproj: "MyApp.xcodeproj")
+UI.message("Current version: #{version}")
+```
+
+## Finding Available Actions
+
+fastlane provides several ways to discover available actions:
+
+### List All Actions
+
+```bash
+fastlane actions
+```
+
+This command displays all available actions with brief descriptions.
+
+### Get Action Details
+
+```bash
+fastlane action [action_name]
+```
+
+For example:
+
+```bash
+fastlane action build_app
+```
+
+This shows detailed information about the action, including:
+- Description
+- Available parameters
+- Example usage
+- Return value
+- Author information
+
+<Tip>
+Use `fastlane action` to quickly look up parameter names and see usage examples for any action.
+</Tip>
+
+## Built-in vs Plugin Actions
+
+### Built-in Actions
+
+fastlane comes with over 200 built-in actions that cover common mobile development tasks:
+
+- **Building**: `build_app`, `gym`, `gradle`
+- **Testing**: `run_tests`, `scan`, `snapshot`
+- **Code Signing**: `match`, `cert`, `sigh`
+- **App Store**: `upload_to_app_store`, `upload_to_testflight`
+- **Versioning**: `increment_build_number`, `increment_version_number`
+- **And many more...**
+
+### Plugin Actions
+
+The fastlane community has created hundreds of plugins that add additional actions:
+
+```bash
+# Search for plugins
+fastlane search_plugins [query]
+
+# Install a plugin
+fastlane add_plugin [plugin_name]
+```
+
+Once installed, plugin actions are used just like built-in actions.
+
+<Card title="Browse Plugins" icon="plug" href="https://docs.fastlane.tools/plugins/available-plugins/">
+  Explore the official fastlane plugin directory
+</Card>
+
+## Action Documentation Format
+
+All actions follow a consistent documentation format:
+
+### Description
+
+A brief explanation of what the action does.
+
+### Parameters
+
+A list of available parameters with:
+- **Key**: Parameter name
+- **Description**: What the parameter does
+- **Type**: Expected data type (String, Boolean, Hash, Array, etc.)
+- **Default value**: If applicable
+- **Optional**: Whether the parameter is required
+
+### Return Value
+
+What the action returns (if anything).
+
+### Example Code
+
+Working examples showing how to use the action.
+
+### Shared Values
+
+Some actions set shared values that can be accessed by other actions in the lane context:
+
+```ruby
+build_app(scheme: "MyApp")
+
+# Access the IPA path set by build_app
+ipa_path = lane_context[SharedValues::IPA_OUTPUT_PATH]
+```
+
+## Action Categories
+
+Actions are organized into categories:
+
+<CardGroup cols={2}>
+  <Card title="App Store" icon="store" href="/actions/app-store">
+    Upload to App Store, TestFlight, and Play Store
+  </Card>
+  
+  <Card title="Testing" icon="flask" href="/actions/testing">
+    Run tests and capture screenshots
+  </Card>
+  
+  <Card title="Building" icon="hammer" href="/actions/building">
+    Build and compile your apps
+  </Card>
+  
+  <Card title="Code Signing" icon="key" href="/actions/code-signing">
+    Manage certificates and provisioning profiles
+  </Card>
+  
+  <Card title="Versioning" icon="tag" href="/actions/versioning">
+    Manage version and build numbers
+  </Card>
+  
+  <Card title="Project Management" icon="folder" href="/actions/project-management">
+    Modify Xcode project settings
+  </Card>
+  
+  <Card title="Notifications" icon="bell" href="/actions/notifications">
+    Send build notifications
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use descriptive parameter names">
+    Always use named parameters for clarity:
+    
+    ```ruby
+    # Good
+    build_app(scheme: "MyApp", clean: true)
+    
+    # Avoid
+    build_app("MyApp", true)
+    ```
+  </Accordion>
+  
+  <Accordion title="Check action return values">
+    Many actions return useful values. Store and use them:
+    
+    ```ruby
+    ipa_path = build_app(scheme: "MyApp")
+    UI.message("Built IPA at: #{ipa_path}")
+    ```
+  </Accordion>
+  
+  <Accordion title="Handle errors gracefully">
+    Use Ruby's exception handling for actions that might fail:
+    
+    ```ruby
+    begin
+      run_tests(scheme: "MyApp")
+    rescue => ex
+      slack(message: "Tests failed: #{ex}")
+      raise ex
+    end
+    ```
+  </Accordion>
+  
+  <Accordion title="Use shared values">
+    Leverage shared values to pass data between actions:
+    
+    ```ruby
+    build_app(scheme: "MyApp")
+    upload_to_testflight # Automatically uses IPA_OUTPUT_PATH
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Explore specific action categories to learn more:
+
+- [App Store Actions](/actions/app-store) - Upload and manage app releases
+- [Testing Actions](/actions/testing) - Automate your testing workflow
+- [Building Actions](/actions/building) - Build iOS and Android apps
+- [Code Signing Actions](/actions/code-signing) - Simplify code signing

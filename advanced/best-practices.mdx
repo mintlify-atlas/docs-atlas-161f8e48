@@ -1,0 +1,400 @@
+---
+title: Best Practices
+description: Best practices for organizing and maintaining your fastlane setup
+---
+
+Follow these best practices to create maintainable, secure, and team-friendly fastlane configurations.
+
+## Fastfile Organization
+
+### Keep Lanes Focused
+
+Each lane should have a single, well-defined purpose. Avoid creating monolithic lanes that try to do everything.
+
+```ruby
+# Good: Focused lanes
+lane :test do
+  run_tests(scheme: "MyApp")
+end
+
+lane :build do
+  gym(scheme: "MyApp")
+end
+
+lane :deploy do
+  test
+  build
+  upload_to_testflight
+end
+
+# Avoid: Monolithic lane with multiple responsibilities
+lane :everything do
+  # Too many unrelated tasks in one lane
+end
+```
+
+### Use Private Lanes
+
+Prefix helper lanes with an underscore to keep them private and reduce clutter in `fastlane lanes` output.
+
+```ruby
+private_lane :_bump_version do
+  increment_version_number
+end
+
+lane :release do
+  _bump_version
+  build
+  upload_to_app_store
+end
+```
+
+### Extract Shared Logic
+
+For complex configurations, consider creating helper methods or custom actions in the `fastlane/actions` directory.
+
+```ruby
+# fastlane/Fastfile
+lane :beta do
+  setup_certificates
+  build_app
+  distribute_beta
+end
+
+def setup_certificates
+  match(type: "appstore")
+end
+
+def build_app
+  gym(scheme: "MyApp", export_method: "app-store")
+end
+```
+
+### Organize Multiple Platforms
+
+Use platform blocks to separate iOS, Android, and other platform-specific lanes.
+
+```ruby
+platform :ios do
+  lane :beta do
+    gym
+    pilot
+  end
+end
+
+platform :android do
+  lane :beta do
+    gradle(task: "assembleRelease")
+    supply(track: "beta")
+  end
+end
+```
+
+## Lane Naming Conventions
+
+### Follow Consistent Naming
+
+Use clear, descriptive names that follow Ruby conventions (snake_case).
+
+```ruby
+# Good
+lane :build_and_test do
+  # ...
+end
+
+lane :deploy_to_testflight do
+  # ...
+end
+
+# Avoid
+lane :BuildAndTest do  # Use snake_case, not PascalCase
+  # ...
+end
+
+lane :deploy do  # Too generic
+  # ...
+end
+```
+
+### Standard Lane Names
+
+Consider using these conventional names for common tasks:
+
+- `test` - Run tests
+- `beta` - Deploy to beta testers
+- `release` - Deploy to production
+- `build` - Build the app
+- `screenshots` - Generate screenshots
+
+## Error Handling
+
+### Use Error Blocks
+
+Handle errors gracefully and provide helpful feedback.
+
+```ruby
+lane :deploy do
+  begin
+    match(type: "appstore")
+    gym
+    upload_to_app_store
+  rescue => exception
+    UI.error("Deployment failed: #{exception.message}")
+    slack(
+      message: "Deployment failed!",
+      success: false
+    )
+    raise exception
+  end
+end
+```
+
+### Validate Parameters Early
+
+```ruby
+lane :custom_deploy do |options|
+  unless options[:environment]
+    UI.user_error!("Please specify an environment")
+  end
+  
+  # Continue with deployment
+end
+```
+
+### Use UI Methods Appropriately
+
+fastlane provides several UI methods for different message types:
+
+```ruby
+UI.message("Regular message")
+UI.success("Operation succeeded")
+UI.important("Pay attention to this")
+UI.error("Something went wrong")
+UI.user_error!("Invalid input - stops execution")
+```
+
+## Security Best Practices
+
+<Warning>
+Never commit credentials, API keys, or certificates directly to version control.
+</Warning>
+
+### Protect Sensitive Data
+
+**Never commit:**
+- `.env` files with credentials
+- API keys
+- Passwords
+- Private keys
+- Provisioning profiles
+- Certificates
+
+**Add to `.gitignore`:**
+```
+# fastlane specific
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Credentials
+fastlane/.env*
+fastlane/Appfile
+
+# Temporary files
+*.ipa
+*.dSYM.zip
+*.app.dSYM.zip
+```
+
+### Use Environment Variables
+
+Store credentials in environment variables or `.env` files (excluded from git).
+
+```ruby
+# .env (add to .gitignore)
+APP_STORE_CONNECT_API_KEY_ID=ABC123
+APP_STORE_CONNECT_ISSUER_ID=xyz-abc-123
+MATCH_PASSWORD=my_secure_password
+```
+
+### Use match for Code Signing
+
+The `match` approach stores certificates in a separate, encrypted git repository:
+
+```ruby
+match(
+  type: "appstore",
+  git_url: "https://github.com/your-org/certificates",
+  readonly: true  # Use readonly on CI
+)
+```
+
+### Secure CI/CD Secrets
+
+Use your CI platform's secret management:
+- GitHub Actions: Repository Secrets
+- GitLab CI: CI/CD Variables
+- CircleCI: Environment Variables
+- Jenkins: Credentials Plugin
+
+<Note>
+fastlane checks for environment variables automatically. You can reference them using `ENV["VAR_NAME"]` or they're automatically used by actions that define `env_name`.
+</Note>
+
+## Version Control
+
+### Commit fastlane Configuration
+
+**Do commit:**
+- `Fastfile`
+- `Appfile` (without sensitive data)
+- `Pluginfile`
+- `Gemfile` and `Gemfile.lock`
+- Custom actions in `fastlane/actions/`
+- `.env.default` (template without real credentials)
+
+**Don't commit:**
+- `.env` (actual credentials)
+- Output files (`report.xml`, screenshots, etc.)
+- Build artifacts (`.ipa`, `.apk`)
+
+### Use .env.default as Template
+
+```ruby
+# .env.default (commit this)
+APP_IDENTIFIER=com.example.app
+APPLE_ID=you@example.com
+TEAM_ID=XXXXXXXXXX
+# Add your actual credentials to .env (not committed)
+```
+
+Team members can copy `.env.default` to `.env` and fill in their credentials.
+
+## Team Collaboration
+
+### Document Your Lanes
+
+Add descriptions to help team members understand each lane:
+
+```ruby
+desc "Run all tests and generate coverage report"
+lane :test do
+  scan(
+    scheme: "MyApp",
+    code_coverage: true
+  )
+end
+
+desc "Build and upload to TestFlight for internal testing"
+lane :beta do
+  # Implementation
+end
+```
+
+Team members can run `fastlane lanes` to see all available lanes with descriptions.
+
+### Use Consistent Tools
+
+Ensure everyone uses the same versions:
+
+```ruby
+# Gemfile
+source "https://rubygems.org"
+
+gem "fastlane", "~> 2.200.0"  # Pin to specific version
+
+plugins_path = File.join(File.dirname(__FILE__), 'fastlane', 'Pluginfile')
+eval_gemfile(plugins_path) if File.exist?(plugins_path)
+```
+
+Team members should run `bundle install` to get the same versions.
+
+### Onboarding Documentation
+
+Create a README in your `fastlane/` directory:
+
+```markdown
+# fastlane Setup
+
+## First Time Setup
+1. Install Ruby and Bundler
+2. Run `bundle install`
+3. Copy `.env.default` to `.env` and fill in your credentials
+4. Run `bundle exec fastlane lanes` to see available lanes
+
+## Common Commands
+- `bundle exec fastlane test` - Run tests
+- `bundle exec fastlane beta` - Deploy to TestFlight
+```
+
+### Code Reviews
+
+Review fastlane changes carefully:
+- Check for accidentally committed secrets
+- Verify lane logic is correct
+- Test changes in a development environment first
+
+## Maintainability
+
+### Keep Dependencies Updated
+
+Regularly update fastlane and plugins:
+
+```bash
+bundle update fastlane
+fastlane update_plugins
+```
+
+### Use Semantic Versioning
+
+Pin major versions in your `Gemfile` to avoid breaking changes:
+
+```ruby
+gem "fastlane", "~> 2.200"  # Will update to 2.x but not 3.x
+```
+
+### Monitor Deprecation Warnings
+
+fastlane warns about deprecated features. Address these proactively:
+
+```ruby
+# Old (deprecated)
+sigh(force: true)
+
+# New
+get_provisioning_profile(force: true)
+```
+
+### Test Your Lanes
+
+Test lanes in a development environment before using them in production:
+
+```ruby
+lane :beta do |options|
+  if options[:dry_run]
+    UI.important("DRY RUN MODE - Not uploading")
+    gym
+    # Skip upload
+  else
+    gym
+    pilot
+  end
+end
+```
+
+Run with: `fastlane beta dry_run:true`
+
+## Following the Vision
+
+fastlane emphasizes being "elegant in success, and empathetic in failure":
+
+- Provide clear error messages
+- Use sensible defaults
+- Make it easy for new team members to get started
+- Automate repetitive tasks
+- Keep configurations simple and readable
+
+<Tip>
+Run `fastlane env` to generate a comprehensive environment report when reporting issues. This includes fastlane version, Ruby version, and system information.
+</Tip>

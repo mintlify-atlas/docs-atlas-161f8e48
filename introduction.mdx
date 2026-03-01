@@ -1,0 +1,111 @@
+---
+title: "Introduction"
+description: "The easiest way to automate beta deployments and releases for your iOS and Android apps"
+---
+
+## What is fastlane?
+
+fastlane is a powerful automation tool for iOS and Android developers that eliminates tedious tasks from your workflow. Instead of manually managing screenshots, provisioning profiles, code signing, and app store submissions, you can automate everything with a single command.
+
+Originally created to simplify iOS deployments, fastlane has grown into the industry-standard automation tool trusted by thousands of developers and companies worldwide.
+
+## Why use fastlane?
+
+<CardGroup cols={2}>
+  <Card title="Automated deployments" icon="rocket">
+    Deploy to TestFlight, App Store, or Google Play with a single command. No more manual uploads or repetitive clicking through forms.
+  </Card>
+
+  <Card title="Screenshot generation" icon="camera">
+    Automatically capture and frame screenshots in multiple languages and device sizes. Save hours of manual work.
+  </Card>
+
+  <Card title="Code signing made simple" icon="shield-check">
+    Sync code signing identities and provisioning profiles across your team with match. Never worry about "works on my machine" again.
+  </Card>
+
+  <Card title="CI/CD integration" icon="gears">
+    Works seamlessly with CircleCI, Jenkins, GitHub Actions, and other CI systems. Automate your entire release pipeline.
+  </Card>
+
+  <Card title="Extensive plugin system" icon="puzzle-piece">
+    Extend functionality with hundreds of community plugins or create your own custom actions.
+  </Card>
+
+  <Card title="Cross-platform support" icon="mobile">
+    One tool for both iOS and Android. Share lanes and actions across platforms.
+  </Card>
+</CardGroup>
+
+## Core tools
+
+fastlane includes a suite of specialized tools for common mobile development tasks:
+
+<AccordionGroup>
+  <Accordion title="deliver" icon="app-store-ios">
+    Upload screenshots, metadata, and binaries to the App Store. Update your app listing from the command line.
+  </Accordion>
+
+  <Accordion title="gym" icon="hammer">
+    Build and package your iOS or Mac app. Create IPA or PKG files ready for distribution.
+  </Accordion>
+
+  <Accordion title="match" icon="lock">
+    Sync code signing identities and provisioning profiles across your team using Git. The recommended approach for code signing.
+  </Accordion>
+
+  <Accordion title="snapshot" icon="camera">
+    Automate taking localized screenshots of your iOS app on every device.
+  </Accordion>
+
+  <Accordion title="scan" icon="magnifying-glass">
+    Run your tests and generate beautiful reports. Integrates with XCTest and xcpretty.
+  </Accordion>
+
+  <Accordion title="supply" icon="google-play">
+    Upload screenshots, metadata, and binaries to Google Play. The Android equivalent of deliver.
+  </Accordion>
+
+  <Accordion title="screengrab" icon="mobile">
+    Automate taking localized screenshots of your Android app on every device.
+  </Accordion>
+
+  <Accordion title="pilot" icon="plane">
+    Manage your TestFlight testers and builds. Upload builds and add testers from the command line.
+  </Accordion>
+
+  <Accordion title="cert" icon="certificate">
+    Automatically create and maintain iOS code signing certificates.
+  </Accordion>
+
+  <Accordion title="sigh" icon="signature">
+    Create, renew, download and repair provisioning profiles.
+  </Accordion>
+</AccordionGroup>
+
+## Trusted by thousands
+
+fastlane is used by developers worldwide to automate their mobile releases:
+
+- **39,000+ stars** on GitHub
+- Used by companies like Google, Twitter, Uber, and thousands more
+- Active community with hundreds of plugins and integrations
+- Open source and MIT licensed
+
+## Get started
+
+Ready to automate your mobile releases? Start by installing fastlane.
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install fastlane on your machine with gem, Homebrew, or bundler.
+  </Card>
+
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Set up fastlane for your project and run your first lane.
+  </Card>
+</CardGroup>
+
+<Note>
+  fastlane requires Ruby 2.7 or higher. It runs on macOS, Linux, and Windows (via WSL).
+</Note>

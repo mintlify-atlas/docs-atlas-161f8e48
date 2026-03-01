@@ -1,0 +1,458 @@
+---
+title: Environment Variables
+description: Complete guide to environment variables used by fastlane
+---
+
+fastlane uses environment variables for configuration, credentials, and customizing behavior. This guide covers the most commonly used variables and how to manage them.
+
+## Using Environment Variables
+
+### Setting Environment Variables
+
+You can set environment variables in several ways:
+
+**Command line:**
+```bash
+FASTLANE_USER=user@example.com fastlane beta
+```
+
+**Export in shell:**
+```bash
+export FASTLANE_USER=user@example.com
+fastlane beta
+```
+
+**CI/CD platform secrets:**
+Use your CI platform's secret management system to securely store and inject variables.
+
+**Using .env files (recommended):**
+Create a `.env` file in your `fastlane/` directory or project root.
+
+## Using .env Files
+
+fastlane automatically loads `.env` files using the [dotenv](https://github.com/bkeepers/dotenv) library.
+
+### File Loading Order
+
+fastlane loads environment files in this order:
+
+1. `.env` - General environment variables
+2. `.env.default` - Default values (should be committed)
+3. `.env.<environment>` - Environment-specific overrides
+
+```bash
+# Load default + production environment
+fastlane beta --env production
+
+# Load multiple environments (later ones override earlier)
+fastlane beta --env staging,production
+```
+
+### Example .env Setup
+
+**`.env.default`** (commit this as a template):
+```bash
+# App Configuration
+APP_IDENTIFIER=com.example.app
+WORKSPACE=MyApp.xcworkspace
+SCHEME=MyApp
+
+# Team IDs (fill in actual values in .env)
+FASTLANE_TEAM_ID=
+FASTLANE_ITC_TEAM_ID=
+
+# Credentials (add actual values to .env, not here)
+FASTLANE_USER=
+MATCH_PASSWORD=
+```
+
+**`.env`** (add to .gitignore, contains real credentials):
+```bash
+# Actual credentials
+FASTLANE_USER=developer@example.com
+FASTLANE_TEAM_ID=ABC123XYZ
+FASTLANE_ITC_TEAM_ID=1234567890
+MATCH_PASSWORD=my_secure_password
+FASTLANE_SESSION=your_session_string
+```
+
+**`.env.production`** (optional, for production-specific values):
+```bash
+APP_IDENTIFIER=com.example.app
+SCHEME=MyApp-Production
+```
+
+<Warning>
+Never commit `.env` files containing real credentials. Always add them to `.gitignore`.
+</Warning>
+
+## Common Environment Variables
+
+### Authentication
+
+#### FASTLANE_USER
+Apple ID email for App Store Connect and Developer Portal.
+
+```bash
+FASTLANE_USER=developer@example.com
+```
+
+#### FASTLANE_PASSWORD
+Apple ID password (not recommended - use FASTLANE_SESSION or App Store Connect API instead).
+
+```bash
+FASTLANE_PASSWORD=your_password
+```
+
+<Note>
+For security, prefer using `FASTLANE_SESSION` for 2FA or App Store Connect API keys instead of passwords.
+</Note>
+
+#### FASTLANE_SESSION
+Session cookie for authentication with 2FA. Generate using `fastlane spaceauth`.
+
+```bash
+fastlane spaceauth -u user@example.com
+# Copy the output and set it as an environment variable
+export FASTLANE_SESSION='---\n- !ruby/object:HTTP::Cookie...'
+```
+
+#### FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD
+App-specific password for App Store Connect (required when using 2FA).
+
+```bash
+FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD=abcd-efgh-ijkl-mnop
+```
+
+### App Store Connect API (Recommended)
+
+#### SPACESHIP_CONNECT_API_KEY_ID
+App Store Connect API Key ID.
+
+```bash
+SPACESHIP_CONNECT_API_KEY_ID=ABC123DEF4
+```
+
+#### SPACESHIP_CONNECT_API_ISSUER_ID
+App Store Connect API Issuer ID.
+
+```bash
+SPACESHIP_CONNECT_API_ISSUER_ID=12345678-abcd-1234-abcd-123456789012
+```
+
+#### SPACESHIP_CONNECT_API_KEY_FILEPATH
+Path to your .p8 API key file.
+
+```bash
+SPACESHIP_CONNECT_API_KEY_FILEPATH=./AuthKey_ABC123.p8
+```
+
+#### SPACESHIP_CONNECT_API_KEY
+API key content (alternative to using filepath).
+
+```bash
+SPACESHIP_CONNECT_API_KEY="-----BEGIN PRIVATE KEY-----\n..."
+```
+
+### Team Selection
+
+#### FASTLANE_TEAM_ID
+Developer Portal Team ID.
+
+```bash
+FASTLANE_TEAM_ID=ABC123XYZ9
+```
+
+#### FASTLANE_TEAM_NAME
+Developer Portal Team Name (alternative to Team ID).
+
+```bash
+FASTLANE_TEAM_NAME="Your Company Name"
+```
+
+#### FASTLANE_ITC_TEAM_ID
+App Store Connect Team ID (for accounts with multiple teams).
+
+```bash
+FASTLANE_ITC_TEAM_ID=123456789
+```
+
+#### FASTLANE_ITC_TEAM_NAME
+App Store Connect Team Name.
+
+```bash
+FASTLANE_ITC_TEAM_NAME="Your Company Name"
+```
+
+### Behavior Customization
+
+#### FASTLANE_HIDE_CHANGELOG
+Hide the changelog when updating fastlane.
+
+```bash
+FASTLANE_HIDE_CHANGELOG=1
+```
+
+#### FASTLANE_SKIP_UPDATE_CHECK
+Skip checking for fastlane updates.
+
+```bash
+FASTLANE_SKIP_UPDATE_CHECK=1
+```
+
+#### FASTLANE_HIDE_TIMESTAMP
+Hide timestamps in output.
+
+```bash
+FASTLANE_HIDE_TIMESTAMP=1
+```
+
+#### FASTLANE_HIDE_PLUGINS_TABLE
+Don't display the plugins table at startup.
+
+```bash
+FASTLANE_HIDE_PLUGINS_TABLE=1
+```
+
+#### FASTLANE_HIDE_GITHUB_ISSUES
+Disable GitHub issue suggestions on errors.
+
+```bash
+FASTLANE_HIDE_GITHUB_ISSUES=1
+```
+
+#### FASTLANE_DISABLE_COLORS
+Disable colored output.
+
+```bash
+FASTLANE_DISABLE_COLORS=1
+```
+
+### Output and Logging
+
+#### FL_OUTPUT_DIR
+Directory for output files.
+
+```bash
+FL_OUTPUT_DIR=./fastlane/output
+```
+
+#### FL_BUILDLOG_PATH
+Custom path for build logs.
+
+```bash
+FL_BUILDLOG_PATH=./logs
+```
+
+#### FL_REPORT_PATH
+Path for generated reports.
+
+```bash
+FL_REPORT_PATH=./reports
+```
+
+#### VERBOSE
+Enable verbose logging.
+
+```bash
+VERBOSE=1 fastlane beta
+```
+
+### match Environment Variables
+
+#### MATCH_PASSWORD
+Password for decrypting match certificates.
+
+```bash
+MATCH_PASSWORD=my_secure_password
+```
+
+#### MATCH_GIT_URL
+Git URL for match repository.
+
+```bash
+MATCH_GIT_URL=https://github.com/your-org/certificates
+```
+
+#### MATCH_KEYCHAIN_NAME
+Keychain name for match.
+
+```bash
+MATCH_KEYCHAIN_NAME=fastlane_keychain
+```
+
+#### MATCH_KEYCHAIN_PASSWORD
+Keychain password.
+
+```bash
+MATCH_KEYCHAIN_PASSWORD=keychain_password
+```
+
+#### MATCH_READONLY
+Use readonly mode (useful on CI).
+
+```bash
+MATCH_READONLY=true
+```
+
+### Spaceship (Apple API Client)
+
+#### SPACESHIP_TIMEOUT
+Timeout for API requests (in seconds).
+
+```bash
+SPACESHIP_TIMEOUT=600
+```
+
+#### SPACESHIP_DEBUG
+Enable debug mode for spaceship.
+
+```bash
+SPACESHIP_DEBUG=1
+```
+
+#### SPACESHIP_PROXY
+HTTP proxy for spaceship requests.
+
+```bash
+SPACESHIP_PROXY=http://proxy.example.com:8080
+```
+
+#### SPACESHIP_COOKIE_PATH
+Custom path for storing cookies.
+
+```bash
+SPACESHIP_COOKIE_PATH=./cookies
+```
+
+#### SPACESHIP_SKIP_2FA_UPGRADE
+Skip 2FA upgrade prompts.
+
+```bash
+SPACESHIP_SKIP_2FA_UPGRADE=1
+```
+
+### CI-Specific Variables
+
+#### CI
+Indicates running in a CI environment (automatically set by most CI systems).
+
+```bash
+CI=true
+```
+
+#### FASTLANE_IS_INTERACTIVE
+Disable interactive prompts (set to false on CI).
+
+```bash
+FASTLANE_IS_INTERACTIVE=false
+```
+
+## Action-Specific Variables
+
+Many fastlane actions support environment variables with the `FL_` prefix:
+
+```bash
+# gym (build_app)
+FL_GYM_SCHEME=MyApp
+FL_GYM_CONFIGURATION=Release
+
+# pilot (upload_to_testflight)
+FL_PILOT_USERNAME=user@example.com
+FL_PILOT_SKIP_WAITING_FOR_BUILD_PROCESSING=true
+
+# scan (run_tests)
+FL_SCAN_SCHEME=MyApp
+FL_SCAN_DEVICE="iPhone 14"
+
+# deliver (upload_to_app_store)
+FL_DELIVER_USERNAME=user@example.com
+FL_DELIVER_SKIP_SCREENSHOTS=true
+```
+
+<Tip>
+To find available environment variables for an action, run `fastlane action <action_name>` to see its documentation.
+</Tip>
+
+## Creating Custom Actions with Environment Variables
+
+When creating custom actions, you can define environment variables:
+
+```ruby
+# fastlane/actions/custom_action.rb
+module Fastlane
+  module Actions
+    class CustomActionAction < Action
+      def self.available_options
+        [
+          FastlaneCore::ConfigItem.new(
+            key: :api_token,
+            env_name: "FL_CUSTOM_ACTION_API_TOKEN",
+            description: "API Token"
+          )
+        ]
+      end
+    end
+  end
+end
+```
+
+Now users can set the value via:
+- Parameter: `custom_action(api_token: "token")`
+- Environment: `FL_CUSTOM_ACTION_API_TOKEN=token`
+
+## Checking Environment Variables
+
+fastlane provides utilities for checking environment variables:
+
+```ruby
+# Check if truthy (not false, 0, off, or no)
+if FastlaneCore::Env.truthy?("MY_VARIABLE")
+  # Variable is set and truthy
+end
+
+# Access directly
+if ENV["MY_VARIABLE"]
+  # Variable is set
+end
+```
+
+## CI/CD Best Practices
+
+### GitHub Actions
+
+```yaml
+steps:
+  - name: Run fastlane
+    env:
+      FASTLANE_USER: ${{ secrets.FASTLANE_USER }}
+      FASTLANE_SESSION: ${{ secrets.FASTLANE_SESSION }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+    run: bundle exec fastlane beta
+```
+
+### GitLab CI
+
+```yaml
+beta:
+  script:
+    - bundle exec fastlane beta
+  variables:
+    FASTLANE_USER: $FASTLANE_USER
+    FASTLANE_SESSION: $FASTLANE_SESSION
+```
+
+### CircleCI
+
+```yaml
+- run:
+    name: Deploy to TestFlight
+    command: bundle exec fastlane beta
+    environment:
+      FASTLANE_USER: $FASTLANE_USER
+      FASTLANE_SESSION: $FASTLANE_SESSION
+```
+
+<Note>
+Always use your CI platform's secure secret storage. Never hardcode credentials in your configuration files.
+</Note>

@@ -1,0 +1,552 @@
+---
+title: produce
+description: Create new iOS apps on App Store Connect and the Apple Developer Portal
+---
+
+## Overview
+
+produce creates new iOS, macOS, and tvOS apps on both App Store Connect and the Apple Developer Portal. It automatically handles app creation, manages app services, and configures capabilities.
+
+<Info>
+produce is the fastest way to set up new apps across Apple's developer platforms.
+</Info>
+
+## Installation
+
+produce is part of fastlane. Install it with:
+
+```bash
+fastlane produce
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Create an app">
+    ```bash
+    fastlane produce
+    ```
+    
+    You'll be prompted for app details like bundle identifier and app name.
+  </Step>
+  
+  <Step title="App is created">
+    The app is now available in both App Store Connect and the Developer Portal.
+  </Step>
+</Steps>
+
+## CLI Commands
+
+<CodeGroup>
+
+```bash Create app (interactive)
+fastlane produce
+```
+
+```bash Create app with options
+fastlane produce \
+  -a com.example.app \
+  -q "My App" \
+  -u user@example.com
+```
+
+```bash Enable services
+fastlane produce enable_services \
+  -a com.example.app \
+  --push-notification \
+  --app-group
+```
+
+```bash Disable services
+fastlane produce disable_services \
+  -a com.example.app \
+  --push-notification
+```
+
+```bash Available services
+fastlane produce available_services \
+  -a com.example.app
+```
+
+```bash Create app group
+fastlane produce group \
+  -g group.com.example.app \
+  -n "My App Group"
+```
+
+```bash Associate app group
+fastlane produce associate_group \
+  -a com.example.app \
+  group.com.example.app
+```
+
+```bash Create merchant
+fastlane produce merchant \
+  -o merchant.com.example.production \
+  -r "Example Merchant"
+```
+
+</CodeGroup>
+
+## Key Options
+
+<ParamField path="app_identifier" type="string" required>
+  The bundle identifier for your app (e.g., com.krausefx.app).
+  
+  ```ruby
+  produce(app_identifier: "com.example.app")
+  ```
+</ParamField>
+
+<ParamField path="app_name" type="string" required>
+  The name of your app as it will appear on the App Store.
+  
+  ```ruby
+  produce(app_name: "My Awesome App")
+  ```
+</ParamField>
+
+<ParamField path="sku" type="string">
+  SKU number for your app. Defaults to current timestamp.
+  
+  ```ruby
+  produce(sku: "1234567890")
+  ```
+</ParamField>
+
+<ParamField path="platform" type="string" default="ios">
+  The platform to create the app for (ios, osx, or tvos).
+  
+  ```ruby
+  produce(platform: "ios")
+  ```
+</ParamField>
+
+<ParamField path="platforms" type="array">
+  Create app for multiple platforms.
+  
+  ```ruby
+  produce(platforms: ["ios", "tvos"])
+  ```
+</ParamField>
+
+<ParamField path="language" type="string" default="English">
+  Primary language for your app.
+  
+  ```ruby
+  produce(language: "English")
+  ```
+</ParamField>
+
+<ParamField path="company_name" type="string">
+  Company name (required for first app only).
+  
+  ```ruby
+  produce(company_name: "Example Inc")
+  ```
+</ParamField>
+
+<ParamField path="skip_itc" type="boolean" default="false">
+  Skip creating the app on App Store Connect.
+  
+  ```ruby
+  produce(skip_itc: true)
+  ```
+</ParamField>
+
+<ParamField path="skip_devcenter" type="boolean" default="false">
+  Skip creating the app on the Apple Developer Portal.
+  
+  ```ruby
+  produce(skip_devcenter: true)
+  ```
+</ParamField>
+
+<ParamField path="team_id" type="string">
+  The ID of your Developer Portal team.
+  
+  ```ruby
+  produce(team_id: "Q2CBPJ58CA")
+  ```
+</ParamField>
+
+<ParamField path="team_name" type="string">
+  The name of your Developer Portal team.
+  
+  ```ruby
+  produce(team_name: "Company Inc")
+  ```
+</ParamField>
+
+<ParamField path="itc_team_id" type="string">
+  The ID of your App Store Connect team.
+  
+  ```ruby
+  produce(itc_team_id: "123456")
+  ```
+</ParamField>
+
+<ParamField path="enable_services" type="hash">
+  Enable specific app services during creation.
+  
+  ```ruby
+  produce(
+    enable_services: {
+      push_notification: "on",
+      app_group: "on",
+      associated_domains: "on"
+    }
+  )
+  ```
+</ParamField>
+
+## Using with fastlane
+
+### Basic App Creation
+
+```ruby
+lane :create_app do
+  produce(
+    app_identifier: "com.example.app",
+    app_name: "My Awesome App",
+    language: "English",
+    sku: "1234567890"
+  )
+end
+```
+
+### Create with Services
+
+```ruby
+lane :create_with_services do
+  produce(
+    app_identifier: "com.example.app",
+    app_name: "My App",
+    enable_services: {
+      push_notification: "on",
+      app_group: "on",
+      associated_domains: "on",
+      healthkit: "on",
+      homekit: "on"
+    }
+  )
+end
+```
+
+### Multi-Platform App
+
+```ruby
+lane :create_multiplatform do
+  produce(
+    app_identifier: "com.example.app",
+    app_name: "My Universal App",
+    platforms: ["ios", "tvos"]
+  )
+end
+```
+
+### Developer Portal Only
+
+```ruby
+lane :create_dev_portal_app do
+  produce(
+    app_identifier: "com.example.app",
+    app_name: "My App",
+    skip_itc: true
+  )
+end
+```
+
+## Managing App Services
+
+### Available Services
+
+List all available services for an app:
+
+```bash
+fastlane produce available_services -a com.example.app
+```
+
+### Enable Services
+
+Enable services via CLI:
+
+```bash
+fastlane produce enable_services \
+  -a com.example.app \
+  --push-notification \
+  --app-group \
+  --associated-domains \
+  --healthkit \
+  --homekit
+```
+
+Or in Fastfile:
+
+```ruby
+lane :enable_features do
+  produce(
+    app_identifier: "com.example.app",
+    enable_services: {
+      push_notification: "on",
+      app_group: "on",
+      associated_domains: "on",
+      healthkit: "on",
+      homekit: "on",
+      wallet: "on",
+      sign_in_with_apple: "on"
+    }
+  )
+end
+```
+
+### Supported Services
+
+<Accordion title="Complete list of services">
+- access_wifi
+- app_attest
+- app_group
+- apple_pay
+- associated_domains
+- auto_fill_credential
+- class_kit
+- icloud (values: "xcode5_compatible", "xcode6_compatible")
+- custom_network_protocol
+- data_protection (values: "complete", "unlessopen", "untilfirstauth")
+- family_controls
+- file_provider_testing_mode
+- fonts
+- game_center (values: "ios", "macos")
+- health_kit
+- hls_interstitial_preview
+- home_kit
+- hotspot
+- in_app_purchase
+- inter_app_audio
+- low_latency_hls
+- managed_associated_domains
+- maps
+- multipath
+- network_extension
+- nfc_tag_reading
+- personal_vpn
+- push_notification
+- sign_in_with_apple
+- siri_kit
+- system_extension
+- user_management
+- wallet
+- wireless_accessory
+- car_play_audio_app
+- car_play_messaging_app
+- car_play_navigation_app
+- car_play_voip_calling_app
+- critical_alerts
+- hotspot_helper
+- driver_kit
+- multitasking_camera_access
+- sf_universal_link_api
+- music_kit
+- shazam_kit
+- communication_notifications
+- group_activities
+- time_sensitive_notifications
+</Accordion>
+
+### Disable Services
+
+```bash
+fastlane produce disable_services \
+  -a com.example.app \
+  --push-notification \
+  --healthkit
+```
+
+## App Groups
+
+### Create App Group
+
+```bash
+fastlane produce group \
+  -g group.com.example.app \
+  -n "My App Group"
+```
+
+In Fastfile:
+
+```ruby
+lane :create_group do
+  produce(
+    app_identifier: "com.example.app",
+    enable_services: {
+      app_group: "on"
+    }
+  )
+end
+```
+
+### Associate App Group
+
+```bash
+fastlane produce associate_group \
+  -a com.example.app \
+  group.com.example.app \
+  group.com.example.shared
+```
+
+## iCloud Containers
+
+### Create iCloud Container
+
+```bash
+fastlane produce cloud_container \
+  -g iCloud.com.example.app \
+  -n "My iCloud Container"
+```
+
+### Associate iCloud Container
+
+```bash
+fastlane produce associate_cloud_container \
+  -a com.example.app \
+  iCloud.com.example.app
+```
+
+## Apple Pay Merchants
+
+### Create Merchant
+
+```bash
+fastlane produce merchant \
+  -o merchant.com.example.production \
+  -r "Example Merchant Production"
+```
+
+### Associate Merchant
+
+```bash
+fastlane produce associate_merchant \
+  -a com.example.app \
+  merchant.com.example.production
+```
+
+## Complete Setup Example
+
+```ruby
+lane :setup_new_app do
+  # Create the app
+  produce(
+    app_identifier: "com.example.newapp",
+    app_name: "My New App",
+    language: "English",
+    sku: Time.now.to_i.to_s,
+    team_id: ENV["DEVELOPER_TEAM_ID"],
+    itc_team_id: ENV["ITC_TEAM_ID"],
+    enable_services: {
+      push_notification: "on",
+      app_group: "on",
+      associated_domains: "on"
+    }
+  )
+  
+  # Create certificates and profiles
+  cert
+  sigh
+  
+  UI.success "App setup complete! 🎉"
+end
+```
+
+## Environment Variables
+
+<ResponseField name="PRODUCE_USERNAME" type="string">
+  Your Apple ID username
+</ResponseField>
+
+<ResponseField name="PRODUCE_APP_IDENTIFIER" type="string">
+  The bundle identifier
+</ResponseField>
+
+<ResponseField name="PRODUCE_APP_NAME" type="string">
+  The app name
+</ResponseField>
+
+<ResponseField name="PRODUCE_TEAM_ID" type="string">
+  Developer Portal team ID
+</ResponseField>
+
+<ResponseField name="PRODUCE_ITC_TEAM_ID" type="string">
+  App Store Connect team ID
+</ResponseField>
+
+<ResponseField name="PRODUCE_PLATFORM" type="string">
+  Platform (ios, osx, tvos)
+</ResponseField>
+
+<ResponseField name="PRODUCE_SKIP_ITC" type="boolean">
+  Skip App Store Connect creation
+</ResponseField>
+
+<ResponseField name="PRODUCE_SKIP_DEVCENTER" type="boolean">
+  Skip Developer Portal creation
+</ResponseField>
+
+## Tips & Best Practices
+
+<Tip>
+**Unique SKU**: Use a unique SKU for each app, such as a timestamp or UUID.
+</Tip>
+
+<Warning>
+**App ID cannot be changed**: Once created, the bundle identifier cannot be changed.
+</Warning>
+
+<Tip>
+**Enable services early**: It's easier to enable services during app creation than adding them later.
+</Tip>
+
+<Check>
+**Test on both platforms**: If creating apps for multiple platforms, test the workflow thoroughly.
+</Check>
+
+## Troubleshooting
+
+### App already exists
+
+The app with this bundle identifier already exists. Use a different identifier.
+
+### Invalid bundle identifier
+
+Ensure your bundle identifier follows Apple's format:
+```
+com.company.appname
+```
+
+### Missing company name
+
+For your first app, provide the company name:
+
+```ruby
+produce(
+  company_name: "My Company Inc",
+  app_identifier: "com.example.app",
+  app_name: "My App"
+)
+```
+
+### Wrong team selected
+
+Specify both team IDs explicitly:
+
+```ruby
+produce(
+  team_id: "Q2CBPJ58CA",
+  itc_team_id: "123456"
+)
+```
+
+## Related Tools
+
+- [cert](/tools/cert) - Create code signing certificates
+- [sigh](/tools/sigh) - Generate provisioning profiles
+- [deliver](/tools/deliver) - Upload app metadata and screenshots

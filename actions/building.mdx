@@ -1,0 +1,532 @@
+---
+title: Building Actions
+description: Build and compile iOS, macOS, and Android applications
+---
+
+## Overview
+
+fastlane provides powerful building actions that handle the complexity of compiling your mobile applications. These actions work with Xcode for iOS/macOS and Gradle for Android.
+
+## iOS/macOS Building Actions
+
+### build_app
+
+Build and sign your iOS or macOS application.
+
+<Note>
+`gym`, `build_ios_app`, and `build_mac_app` are aliases for `build_app`.
+</Note>
+
+#### Basic Usage
+
+```ruby
+build_app(scheme: "MyApp")
+```
+
+#### Parameters
+
+<ParamField path="workspace" type="string">
+  Path to the workspace file (.xcworkspace)
+</ParamField>
+
+<ParamField path="project" type="string">
+  Path to the project file (.xcodeproj) - alternative to workspace
+</ParamField>
+
+<ParamField path="scheme" type="string">
+  The scheme to build
+</ParamField>
+
+<ParamField path="configuration" type="string">
+  The build configuration (Debug, Release, etc.)
+</ParamField>
+
+<ParamField path="clean" type="boolean" default="false">
+  Clean the project before building
+</ParamField>
+
+<ParamField path="output_directory" type="string" default=".">
+  Destination directory for the IPA/PKG
+</ParamField>
+
+<ParamField path="output_name" type="string">
+  Name of the output file (including extension)
+</ParamField>
+
+<ParamField path="sdk" type="string">
+  SDK to build with (e.g., "iOS 16.0")
+</ParamField>
+
+<ParamField path="export_method" type="string">
+  Export method (app-store, ad-hoc, development, enterprise)
+</ParamField>
+
+<ParamField path="export_options" type="hash">
+  Hash of export options for xcodebuild
+</ParamField>
+
+<ParamField path="silent" type="boolean" default="false">
+  Hide all build output
+</ParamField>
+
+<ParamField path="archive_path" type="string">
+  Path to the xcarchive
+</ParamField>
+
+<ParamField path="derived_data_path" type="string">
+  Custom derived data path
+</ParamField>
+
+<ParamField path="buildlog_path" type="string">
+  Path for build logs
+</ParamField>
+
+<ParamField path="include_symbols" type="boolean" default="true">
+  Include symbols in the IPA
+</ParamField>
+
+<ParamField path="include_bitcode" type="boolean" default="true">
+  Include bitcode in the IPA
+</ParamField>
+
+<ParamField path="export_xcargs" type="string">
+  Additional xcodebuild arguments
+</ParamField>
+
+#### Return Value
+
+Returns the absolute path to the generated IPA or PKG file.
+
+#### Shared Values
+
+- `IPA_OUTPUT_PATH` - Path to the generated IPA file
+- `PKG_OUTPUT_PATH` - Path to the generated PKG file (macOS)
+- `DSYM_OUTPUT_PATH` - Path to the dSYM files
+- `XCODEBUILD_ARCHIVE` - Path to the xcodebuild archive
+
+#### Examples
+
+```ruby
+# Basic build
+build_app(scheme: "MyApp", workspace: "MyApp.xcworkspace")
+
+# Complete configuration
+build_app(
+  workspace: "MyApp.xcworkspace",
+  configuration: "Release",
+  scheme: "MyApp",
+  silent: true,
+  clean: true,
+  output_directory: "path/to/dir",
+  output_name: "my-app.ipa",
+  sdk: "iOS 16.0"
+)
+
+# Using gym alias
+gym(
+  scheme: "MyApp",
+  export_method: "app-store"
+)
+
+# iOS specific
+build_ios_app(
+  scheme: "MyApp",
+  export_method: "ad-hoc"
+)
+
+# macOS specific
+build_mac_app(
+  scheme: "MyMacApp"
+)
+
+# With custom export options
+build_app(
+  scheme: "MyApp",
+  export_method: "app-store",
+  export_options: {
+    provisioningProfiles: {
+      "com.example.app" => "App Store Profile"
+    },
+    signingStyle: "manual",
+    teamID: "XXXXXXXXXX"
+  }
+)
+
+# Archive only (no export)
+build_app(
+  scheme: "MyApp",
+  skip_build_archive: false,
+  skip_archive: false,
+  archive_path: "./MyApp.xcarchive"
+)
+```
+
+#### Integration with Code Signing
+
+`build_app` automatically integrates with code signing actions:
+
+```ruby
+# Using match
+match(type: "appstore")
+build_app(scheme: "MyApp")
+# Export method and profiles are automatically set
+
+# Using sigh
+sigh(adhoc: true)
+build_app(scheme: "MyApp")
+# Provisioning profile is automatically used
+```
+
+#### Supported Platforms
+
+- iOS
+- macOS
+
+---
+
+### xcodebuild
+
+Direct access to xcodebuild for custom build scenarios.
+
+#### Basic Usage
+
+```ruby
+xcodebuild(
+  workspace: "MyApp.xcworkspace",
+  scheme: "MyApp",
+  build: true
+)
+```
+
+<Warning>
+Prefer `build_app` over `xcodebuild` for most use cases. `xcodebuild` is lower-level and requires more configuration.
+</Warning>
+
+---
+
+## Android Building Actions
+
+### gradle
+
+Build and test your Android application using Gradle.
+
+#### Basic Usage
+
+```ruby
+gradle(
+  task: "assemble",
+  build_type: "Release"
+)
+```
+
+#### Parameters
+
+<ParamField path="task" type="string">
+  Gradle task to execute (assemble, bundle, test, etc.)
+</ParamField>
+
+<ParamField path="flavor" type="string">
+  Build flavor (e.g., "Production", "Staging")
+</ParamField>
+
+<ParamField path="build_type" type="string">
+  Build type (e.g., "Release", "Debug")
+</ParamField>
+
+<ParamField path="tasks" type="array">
+  Multiple gradle tasks to execute
+</ParamField>
+
+<ParamField path="flags" type="string">
+  Additional gradle flags
+</ParamField>
+
+<ParamField path="project_dir" type="string" default=".">
+  Root directory of the gradle project
+</ParamField>
+
+<ParamField path="gradle_path" type="string" default="./gradlew">
+  Path to gradlew executable
+</ParamField>
+
+<ParamField path="properties" type="hash">
+  Gradle properties (-P flags)
+</ParamField>
+
+<ParamField path="system_properties" type="hash">
+  Gradle system properties (-D flags)
+</ParamField>
+
+<ParamField path="serial" type="string">
+  Android device serial for testing
+</ParamField>
+
+<ParamField path="print_command" type="boolean" default="true">
+  Print the gradle command before running
+</ParamField>
+
+<ParamField path="print_command_output" type="boolean" default="true">
+  Print gradle command output
+</ParamField>
+
+#### Shared Values
+
+- `GRADLE_APK_OUTPUT_PATH` - Path to the generated APK
+- `GRADLE_ALL_APK_OUTPUT_PATHS` - All generated APK paths
+- `GRADLE_AAB_OUTPUT_PATH` - Path to the generated AAB
+- `GRADLE_ALL_AAB_OUTPUT_PATHS` - All generated AAB paths
+- `GRADLE_FLAVOR` - The flavor used
+- `GRADLE_BUILD_TYPE` - The build type used
+- `GRADLE_MAPPING_TXT_OUTPUT_PATH` - Path to mapping.txt (ProGuard)
+- `GRADLE_OUTPUT_JSON_OUTPUT_PATH` - Path to output metadata
+
+#### Examples
+
+```ruby
+# Build APK
+gradle(
+  task: "assemble",
+  flavor: "Production",
+  build_type: "Release"
+)
+
+# Build AAB (Android App Bundle)
+gradle(
+  task: "bundle",
+  flavor: "Production",
+  build_type: "Release"
+)
+
+# Multiple tasks
+gradle(
+  tasks: ["assembleDebug", "bundleDebug"]
+)
+
+# With properties
+gradle(
+  task: "assemble",
+  build_type: "Release",
+  properties: {
+    "exampleNumber" => 100,
+    "exampleString" => "1.0.0"
+  }
+)
+
+# Change version code and name
+gradle(
+  task: "assemble",
+  build_type: "Release",
+  properties: {
+    "android.injected.version.code" => 100,
+    "android.injected.version.name" => "1.0.0"
+  }
+)
+
+# Automatic signing
+gradle(
+  task: "assemble",
+  build_type: "Release",
+  print_command: false,
+  properties: {
+    "android.injected.signing.store.file" => "keystore.jks",
+    "android.injected.signing.store.password" => "store_password",
+    "android.injected.signing.key.alias" => "key_alias",
+    "android.injected.signing.key.password" => "key_password"
+  }
+)
+
+# With custom flags
+gradle(
+  task: "assemble",
+  build_type: "Release",
+  flags: "--exitcode --xml file.xml"
+)
+
+# Clean build
+gradle(task: "clean")
+
+# Run tests
+gradle(
+  task: "test",
+  build_type: "Debug"
+)
+```
+
+#### Supported Platforms
+
+- Android
+- iOS (for cross-platform apps)
+
+---
+
+### build_android_app
+
+Alias for `gradle` with Android-specific defaults.
+
+```ruby
+build_android_app(
+  task: "assemble",
+  build_type: "Release"
+)
+```
+
+---
+
+## Complete Building Workflows
+
+### iOS Release Build
+
+```ruby
+lane :release do
+  # Ensure we're on the right branch
+  ensure_git_branch(branch: "main")
+  
+  # Get certificates and profiles
+  match(type: "appstore")
+  
+  # Increment build number
+  increment_build_number
+  
+  # Build the app
+  build_app(
+    scheme: "MyApp",
+    configuration: "Release",
+    clean: true,
+    output_directory: "./builds",
+    output_name: "MyApp-#{get_version_number}.ipa"
+  )
+  
+  # Upload to App Store
+  upload_to_app_store
+end
+```
+
+### iOS Ad Hoc Build
+
+```ruby
+lane :adhoc do
+  # Get ad hoc profile
+  match(type: "adhoc")
+  
+  # Build
+  build_app(
+    scheme: "MyApp",
+    export_method: "ad-hoc",
+    output_directory: "./builds"
+  )
+  
+  # Distribute via Firebase or another service
+  firebase_app_distribution(
+    app: "1:1234567890:ios:abcdef",
+    ipa_path: lane_context[SharedValues::IPA_OUTPUT_PATH]
+  )
+end
+```
+
+### Android Release Build
+
+```ruby
+lane :release do
+  # Increment version
+  increment_version_code
+  
+  # Build AAB
+  gradle(
+    task: "bundle",
+    flavor: "Production",
+    build_type: "Release"
+  )
+  
+  # Upload to Play Store
+  upload_to_play_store(
+    track: "production",
+    aab: lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH]
+  )
+end
+```
+
+### Multi-Flavor Android Build
+
+```ruby
+lane :build_all_flavors do
+  ["Dev", "Staging", "Production"].each do |flavor|
+    gradle(
+      task: "assemble",
+      flavor: flavor,
+      build_type: "Release"
+    )
+  end
+end
+```
+
+### Cross-Platform Build
+
+```ruby
+lane :build do |options|
+  if options[:platform] == "ios"
+    match(type: "appstore")
+    build_app(scheme: "MyApp")
+  elsif options[:platform] == "android"
+    gradle(
+      task: "bundle",
+      build_type: "Release"
+    )
+  end
+end
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Clean builds for releases">
+    Always clean before building release versions:
+    
+    ```ruby
+    build_app(
+      scheme: "MyApp",
+      clean: true  # Ensures fresh build
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Use build output paths">
+    Access built artifacts via shared values:
+    
+    ```ruby
+    build_app(scheme: "MyApp")
+    ipa_path = lane_context[SharedValues::IPA_OUTPUT_PATH]
+    UI.message("Built: #{ipa_path}")
+    ```
+  </Accordion>
+  
+  <Accordion title="Specify output locations">
+    Organize builds in dedicated directories:
+    
+    ```ruby
+    build_app(
+      scheme: "MyApp",
+      output_directory: "./builds/#{ENV['CI_BUILD_NUMBER']}",
+      output_name: "MyApp-v#{get_version_number}.ipa"
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Use AAB for Android">
+    Google Play requires AAB format for new apps:
+    
+    ```ruby
+    # Use bundle task instead of assemble
+    gradle(
+      task: "bundle",
+      build_type: "Release"
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Actions
+
+- [match](/actions/code-signing#match) - Code signing for iOS
+- [increment_build_number](/actions/versioning#increment_build_number) - Version management
+- [upload_to_app_store](/actions/app-store#upload_to_app_store) - Upload iOS builds
+- [upload_to_play_store](/actions/app-store#upload_to_play_store) - Upload Android builds

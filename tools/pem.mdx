@@ -1,0 +1,448 @@
+---
+title: pem
+description: Automatically generate and renew push notification certificates
+---
+
+## Overview
+
+pem automatically generates and renews your push notification certificates. It checks if your current certificate is still valid and creates a new one if needed, handling both development and production certificates.
+
+<Info>
+pem makes managing push notification certificates effortless by automating the entire process.
+</Info>
+
+## Installation
+
+pem is part of fastlane. Install it with:
+
+```bash
+fastlane pem
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Run pem">
+    ```bash
+    fastlane pem
+    ```
+    
+    pem will check if you have a valid push certificate and create one if needed.
+  </Step>
+  
+  <Step title="Use the certificate">
+    Upload the generated `.pem` file to your push notification service provider.
+  </Step>
+</Steps>
+
+## Certificate Types
+
+<CodeGroup>
+
+```bash Production Certificate (default)
+fastlane pem
+```
+
+```bash Development Certificate
+fastlane pem --development
+```
+
+```bash Website Push Certificate
+fastlane pem --website_push
+```
+
+</CodeGroup>
+
+## Key Options
+
+<ParamField path="app_identifier" type="string" required>
+  The bundle identifier of your app.
+  
+  ```ruby
+  pem(app_identifier: "com.example.app")
+  ```
+</ParamField>
+
+<ParamField path="development" type="boolean" default="false">
+  Generate a development push certificate instead of production.
+  
+  ```ruby
+  pem(development: true)
+  ```
+</ParamField>
+
+<ParamField path="website_push" type="boolean" default="false">
+  Create a Website Push certificate.
+  
+  ```ruby
+  pem(website_push: true)
+  ```
+</ParamField>
+
+<ParamField path="generate_p12" type="boolean" default="true">
+  Generate a p12 file in addition to the PEM file.
+  
+  ```ruby
+  pem(generate_p12: true)
+  ```
+</ParamField>
+
+<ParamField path="active_days_limit" type="integer" default="30">
+  Renew certificate if it's active for less than this number of days.
+  
+  ```ruby
+  pem(active_days_limit: 60)
+  ```
+</ParamField>
+
+<ParamField path="force" type="boolean" default="false">
+  Create a new certificate even if the current one is still valid.
+  
+  ```ruby
+  pem(force: true)
+  ```
+</ParamField>
+
+<ParamField path="save_private_key" type="boolean" default="true">
+  Save the private RSA key.
+  
+  ```ruby
+  pem(save_private_key: true)
+  ```
+</ParamField>
+
+<ParamField path="pem_name" type="string">
+  Custom filename for the generated .pem file.
+  
+  ```ruby
+  pem(pem_name: "my_push_cert.pem")
+  ```
+</ParamField>
+
+<ParamField path="output_path" type="string" default=".">
+  Directory to store certificates and private keys.
+  
+  ```ruby
+  pem(output_path: "./certificates")
+  ```
+</ParamField>
+
+<ParamField path="p12_password" type="string">
+  Password for the generated p12 file.
+  
+  ```ruby
+  pem(p12_password: "secure_password")
+  ```
+</ParamField>
+
+<ParamField path="platform" type="string" default="ios">
+  The platform to use (ios or macos).
+  
+  ```ruby
+  pem(platform: "macos")
+  ```
+</ParamField>
+
+<ParamField path="username" type="string">
+  Your Apple ID username.
+  
+  ```ruby
+  pem(username: "user@example.com")
+  ```
+</ParamField>
+
+<ParamField path="team_id" type="string">
+  The ID of your Developer Portal team.
+  
+  ```ruby
+  pem(team_id: "Q2CBPJ58CA")
+  ```
+</ParamField>
+
+<ParamField path="team_name" type="string">
+  The name of your Developer Portal team.
+  
+  ```ruby
+  pem(team_name: "Company Inc")
+  ```
+</ParamField>
+
+## CLI Commands
+
+<CodeGroup>
+
+```bash Production certificate
+fastlane pem
+```
+
+```bash Development certificate
+fastlane pem --development
+```
+
+```bash Force new certificate
+fastlane pem --force
+```
+
+```bash Custom output
+fastlane pem -o ./certificates -e my_cert.pem
+```
+
+</CodeGroup>
+
+## Using with fastlane
+
+### Basic Usage
+
+```ruby
+lane :push_certs do
+  pem
+end
+```
+
+### Development Certificate
+
+```ruby
+lane :dev_push do
+  pem(
+    development: true,
+    app_identifier: "com.example.app"
+  )
+end
+```
+
+### Production Certificate
+
+```ruby
+lane :prod_push do
+  pem(
+    development: false,
+    app_identifier: "com.example.app",
+    output_path: "./certificates",
+    p12_password: ENV["P12_PASSWORD"]
+  )
+end
+```
+
+### Multiple Apps
+
+```ruby
+lane :all_push_certs do
+  ["com.example.app", "com.example.app.watchkit"].each do |identifier|
+    pem(
+      app_identifier: identifier,
+      output_path: "./certificates/#{identifier}"
+    )
+  end
+end
+```
+
+### Force Renewal
+
+```ruby
+lane :renew_push do
+  pem(
+    force: true,
+    app_identifier: "com.example.app"
+  )
+end
+```
+
+### Custom Configuration
+
+```ruby
+lane :custom_push do
+  pem(
+    app_identifier: "com.example.app",
+    pem_name: "production_push",
+    active_days_limit: 60,
+    generate_p12: true,
+    p12_password: ENV["P12_PASSWORD"],
+    save_private_key: true,
+    output_path: "./push_certificates"
+  )
+end
+```
+
+## Generated Files
+
+After running pem, you'll get:
+
+1. **PEM file** - The certificate in PEM format
+   - Example: `production_com.example.app.pem`
+   - Use with most push notification services
+
+2. **P12 file** (if `generate_p12: true`)
+   - Example: `production_com.example.app.p12`
+   - Use with services that require P12 format
+
+3. **Private key file** (if `save_private_key: true`)
+   - Example: `production_com.example.app.pkey`
+   - Keep this secure and private
+
+## Certificate Validation
+
+pem automatically checks your certificate validity:
+
+```ruby
+lane :check_push do
+  pem(
+    app_identifier: "com.example.app",
+    active_days_limit: 30
+  )
+end
+```
+
+Output:
+```
+[pem] Certificate is valid for 45 days 🎉
+```
+
+Or:
+```
+[pem] Certificate expires in 15 days, renewing...
+```
+
+## Integrating with Push Services
+
+### Upload to Your Service
+
+After generating the certificate:
+
+1. Locate the generated `.pem` file
+2. Upload it to your push notification service (Firebase, OneSignal, etc.)
+3. Configure your backend to use the new certificate
+
+### Store Securely
+
+```ruby
+lane :secure_push do
+  pem(
+    output_path: ENV["SECURE_CERT_PATH"],
+    p12_password: ENV["P12_PASSWORD"]
+  )
+  
+  # Upload to secure storage
+  sh "aws s3 cp ./certificates/ s3://my-bucket/certificates/ --recursive"
+end
+```
+
+## Environment Variables
+
+<ResponseField name="PEM_USERNAME" type="string">
+  Your Apple ID username
+</ResponseField>
+
+<ResponseField name="PEM_APP_IDENTIFIER" type="string">
+  The bundle identifier of your app
+</ResponseField>
+
+<ResponseField name="PEM_TEAM_ID" type="string">
+  The ID of your Developer Portal team
+</ResponseField>
+
+<ResponseField name="PEM_TEAM_NAME" type="string">
+  The name of your Developer Portal team
+</ResponseField>
+
+<ResponseField name="PEM_DEVELOPMENT" type="boolean">
+  Create a development certificate
+</ResponseField>
+
+<ResponseField name="PEM_FORCE" type="boolean">
+  Force certificate creation
+</ResponseField>
+
+<ResponseField name="PEM_P12_PASSWORD" type="string">
+  Password for the P12 file
+</ResponseField>
+
+<ResponseField name="PEM_OUTPUT_PATH" type="string">
+  Directory to store certificates
+</ResponseField>
+
+<ResponseField name="PEM_FILE_NAME" type="string">
+  Custom filename for the PEM file
+</ResponseField>
+
+## Tips & Best Practices
+
+<Tip>
+**Set a password**: Always use a strong password for your P12 files to keep them secure.
+</Tip>
+
+<Warning>
+**Keep private keys secure**: Never commit private key files to version control. Store them securely.
+</Warning>
+
+<Tip>
+**Monitor expiration**: Set up automated checks to renew certificates before they expire.
+</Tip>
+
+<Check>
+**Test both environments**: Generate and test both development and production certificates.
+</Check>
+
+## Automation Example
+
+Automate certificate renewal:
+
+```ruby
+lane :renew_push_certs do
+  # Production
+  pem(
+    app_identifier: "com.example.app",
+    active_days_limit: 30,
+    output_path: "./certs/production",
+    p12_password: ENV["P12_PASSWORD"]
+  )
+  
+  # Development
+  pem(
+    app_identifier: "com.example.app",
+    development: true,
+    active_days_limit: 30,
+    output_path: "./certs/development",
+    p12_password: ENV["P12_PASSWORD"]
+  )
+  
+  # Upload to your server
+  sh "./scripts/upload_certificates.sh"
+end
+```
+
+## Troubleshooting
+
+### Certificate not found
+
+Make sure the app identifier exists:
+
+```ruby
+pem(app_identifier: "com.example.app")
+```
+
+### Certificate limit reached
+
+Apple limits push certificates. Revoke old ones in the Developer Portal.
+
+### Wrong certificate type
+
+Specify the correct type:
+
+```ruby
+pem(development: true)  # For development
+pem(development: false) # For production
+```
+
+### Invalid password
+
+Ensure you're using the correct password:
+
+```ruby
+pem(p12_password: ENV["P12_PASSWORD"])
+```
+
+## Related Tools
+
+- [cert](/tools/cert) - Manage code signing certificates
+- [sigh](/tools/sigh) - Manage provisioning profiles
+- [match](/tools/match) - Sync certificates across team

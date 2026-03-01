@@ -1,0 +1,588 @@
+---
+title: CircleCI Integration
+description: Set up fastlane on CircleCI for automated iOS and macOS builds
+---
+
+## Overview
+
+CircleCI is a cloud-based continuous integration platform. The `setup_circle_ci` action (or `setup_ci`) configures fastlane to work seamlessly with CircleCI, handling keychains, code signing, and output paths.
+
+## Quick Start
+
+Add this to your `Fastfile`:
+
+```ruby
+platform :ios do
+  before_all do
+    setup_circle_ci
+  end
+
+  lane :test do
+    run_tests(scheme: "MyApp")
+  end
+
+  lane :beta do
+    match(type: "appstore")
+    build_app(scheme: "MyApp")
+    upload_to_testflight
+  end
+end
+```
+
+## The setup_circle_ci Action
+
+The `setup_circle_ci` action is a convenience wrapper around `setup_ci` that automatically detects CircleCI and configures fastlane accordingly.
+
+### What it Does
+
+<Steps>
+  <Step title="Creates Temporary Keychain">
+    Sets up a temporary keychain for code signing
+    
+    - Keychain name: `fastlane_tmp_keychain`
+    - Empty password for CI compatibility
+    - Set as default keychain
+    - Auto-unlock enabled
+  </Step>
+  
+  <Step title="Configures Match">
+    Sets match to readonly mode
+    
+    - Prevents creating new certificates on CI
+    - Uses the temporary keychain
+    - Sets `MATCH_READONLY=true`
+  </Step>
+  
+  <Step title="Sets Output Paths">
+    Configures output directories for CircleCI artifacts
+    
+    - `SCAN_OUTPUT_DIRECTORY` → `$FL_OUTPUT_DIR/scan`
+    - `GYM_OUTPUT_DIRECTORY` → `$FL_OUTPUT_DIR/gym`
+    - `FL_BUILDLOG_PATH` → `$FL_OUTPUT_DIR/buildlogs`
+    - Enables simulator log collection
+  </Step>
+</Steps>
+
+### Usage
+
+```ruby
+# Basic usage (auto-detects CircleCI)
+setup_circle_ci
+
+# Force setup even when not on CircleCI
+setup_circle_ci(force: true)
+
+# Using setup_ci with explicit provider
+setup_ci(provider: "circleci")
+
+# Custom keychain timeout
+setup_ci(
+  provider: "circleci",
+  timeout: 0  # No timeout
+)
+
+# Custom keychain name
+setup_ci(
+  provider: "circleci",
+  keychain_name: "my_keychain"
+)
+```
+
+## CircleCI Configuration
+
+### Basic config.yml
+
+```yaml
+version: 2.1
+
+orbs:
+  ruby: circleci/ruby@2.5.4
+  macos: circleci/macos@2
+
+jobs:
+  test:
+    macos:
+      xcode: 16.4.0
+    resource_class: m4pro.medium
+    
+    environment:
+      FL_OUTPUT_DIR: output
+      FASTLANE_LANE: test
+    
+    steps:
+      - checkout
+      
+      # Set up Ruby
+      - macos/switch-ruby:
+          version: '3.1'
+      
+      # Install dependencies
+      - ruby/install-deps
+      
+      # Run fastlane
+      - run:
+          name: Run tests
+          command: bundle exec fastlane test
+      
+      # Store test results
+      - store_test_results:
+          path: output/scan
+      
+      # Store artifacts
+      - store_artifacts:
+          path: output
+
+workflows:
+  test-and-deploy:
+    jobs:
+      - test
+```
+
+### Advanced Configuration with Caching
+
+```yaml
+version: 2.1
+
+orbs:
+  ruby: circleci/ruby@2.5.4
+  macos: circleci/macos@2
+
+jobs:
+  test:
+    macos:
+      xcode: 16.4.0
+    resource_class: m4pro.medium
+    
+    environment:
+      FL_OUTPUT_DIR: output
+      LC_ALL: en_US.UTF-8
+      LANG: en_US.UTF-8
+    
+    steps:
+      - checkout
+      
+      # Restore git cache
+      - restore_cache:
+          keys:
+            - source-v1-{{ arch }}-{{ .Branch }}-{{ .Revision }}
+            - source-v1-{{ arch }}-{{ .Branch }}-
+            - source-v1-{{ arch }}
+      
+      - save_cache:
+          key: source-v1-{{ arch }}-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - .git
+      
+      # Set up Ruby
+      - macos/switch-ruby:
+          version: '3.1'
+      
+      # Restore gem cache
+      - restore_cache:
+          keys:
+            - gems-v1-{{ arch }}-{{ checksum "Gemfile.lock" }}
+            - gems-v1-{{ arch }}
+      
+      # Install dependencies
+      - ruby/install-deps
+      
+      - save_cache:
+          key: gems-v1-{{ arch }}-{{ checksum "Gemfile.lock" }}
+          paths:
+            - vendor/bundle
+      
+      # Restore CocoaPods cache
+      - restore_cache:
+          keys:
+            - pods-v1-{{ arch }}-{{ checksum "Podfile.lock" }}
+            - pods-v1-{{ arch }}
+      
+      - run:
+          name: Install CocoaPods
+          command: bundle exec pod install
+      
+      - save_cache:
+          key: pods-v1-{{ arch }}-{{ checksum "Podfile.lock" }}
+          paths:
+            - Pods
+            - ~/.cocoapods
+      
+      # Run tests
+      - run:
+          name: Run tests
+          command: bundle exec fastlane test
+      
+      # Store results
+      - store_test_results:
+          path: output/scan
+      
+      - store_artifacts:
+          path: output/scan
+          destination: test-results
+      
+      - store_artifacts:
+          path: output/buildlogs
+          destination: build-logs
+  
+  deploy:
+    macos:
+      xcode: 16.4.0
+    resource_class: m4pro.medium
+    
+    environment:
+      FL_OUTPUT_DIR: output
+    
+    steps:
+      - checkout
+      
+      - macos/switch-ruby:
+          version: '3.1'
+      
+      - ruby/install-deps
+      
+      - run:
+          name: Deploy to TestFlight
+          command: bundle exec fastlane beta
+      
+      - store_artifacts:
+          path: output/MyApp.ipa
+          destination: ipa
+
+workflows:
+  test-and-deploy:
+    jobs:
+      - test
+      - deploy:
+          requires:
+            - test
+          filters:
+            branches:
+              only: main
+```
+
+### Multi-Version Testing
+
+```yaml
+version: 2.1
+
+orbs:
+  ruby: circleci/ruby@2.5.4
+  macos: circleci/macos@2
+
+jobs:
+  test:
+    parameters:
+      xcode_version:
+        type: string
+      ruby_version:
+        type: string
+    
+    macos:
+      xcode: << parameters.xcode_version >>
+    resource_class: m4pro.medium
+    
+    environment:
+      FL_OUTPUT_DIR: output
+    
+    steps:
+      - checkout
+      
+      - macos/switch-ruby:
+          version: << parameters.ruby_version >>
+      
+      - ruby/install-deps
+      
+      - run:
+          name: Run tests
+          command: bundle exec fastlane test
+      
+      - store_test_results:
+          path: output/scan
+
+workflows:
+  test-matrix:
+    jobs:
+      - test:
+          name: "Test Xcode 16.3, Ruby 3.1"
+          xcode_version: "16.3.0"
+          ruby_version: "3.1"
+      
+      - test:
+          name: "Test Xcode 16.4, Ruby 3.2"
+          xcode_version: "16.4.0"
+          ruby_version: "3.2"
+      
+      - test:
+          name: "Test Xcode 16.4, Ruby 3.3"
+          xcode_version: "16.4.0"
+          ruby_version: "3.3"
+```
+
+## Environment Variables
+
+### Setting Up Secrets
+
+Add environment variables in CircleCI project settings:
+
+**Project Settings → Environment Variables**
+
+<CodeGroup>
+```bash App Store Connect API Key (Recommended)
+APP_STORE_CONNECT_API_KEY_KEY_ID=ABC123
+APP_STORE_CONNECT_API_KEY_ISSUER_ID=xyz-123-abc
+APP_STORE_CONNECT_API_KEY_KEY=-----BEGIN PRIVATE KEY-----\n...
+```
+
+```bash Match Configuration
+MATCH_GIT_URL=https://github.com/your-org/certificates.git
+MATCH_PASSWORD=your_strong_password
+MATCH_GIT_BASIC_AUTHORIZATION=base64_encoded_token
+```
+
+```bash Apple ID (Legacy)
+FASTLANE_USER=your@email.com
+FASTLANE_PASSWORD=your_password
+FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD=xxxx-xxxx-xxxx-xxxx
+```
+</CodeGroup>
+
+### Environment Variables Set by setup_circle_ci
+
+When `FL_OUTPUT_DIR` is set, these are automatically configured:
+
+```bash
+SCAN_OUTPUT_DIRECTORY=$FL_OUTPUT_DIR/scan
+GYM_OUTPUT_DIRECTORY=$FL_OUTPUT_DIR/gym
+FL_BUILDLOG_PATH=$FL_OUTPUT_DIR/buildlogs
+SCAN_INCLUDE_SIMULATOR_LOGS=true
+```
+
+Keychain configuration:
+
+```bash
+MATCH_KEYCHAIN_NAME=fastlane_tmp_keychain
+MATCH_KEYCHAIN_PASSWORD=""
+MATCH_READONLY=true
+```
+
+### CircleCI Built-in Variables
+
+Useful CircleCI variables:
+
+```bash
+CIRCLECI=true                    # Indicates running on CircleCI
+CI=true                          # Generic CI indicator
+CIRCLE_BRANCH=main               # Current branch
+CIRCLE_BUILD_NUM=123             # Build number
+CIRCLE_SHA1=abc123...            # Git commit SHA
+CIRCLE_TAG=v1.0.0                # Git tag (if any)
+CIRCLE_PROJECT_REPONAME=my-app   # Repository name
+CIRCLE_WORKING_DIRECTORY=~/project  # Working directory
+```
+
+Use in Fastfile:
+
+```ruby
+lane :beta do
+  # Use CircleCI build number
+  increment_build_number(
+    build_number: ENV['CIRCLE_BUILD_NUM']
+  )
+  
+  # Tag builds from specific branch
+  version_suffix = ENV['CIRCLE_BRANCH'] == 'main' ? '' : "-#{ENV['CIRCLE_BRANCH']}"
+  
+  build_app(scheme: "MyApp")
+  upload_to_testflight
+end
+```
+
+## Example Fastfile
+
+```ruby
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    setup_circle_ci if is_ci
+  end
+
+  desc "Run tests"
+  lane :test do
+    run_tests(
+      scheme: "MyApp",
+      devices: ["iPhone 15"],
+      code_coverage: true,
+      output_directory: ENV['FL_OUTPUT_DIR'] + '/scan'
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    # Sync certificates (readonly on CI)
+    match(
+      type: "appstore",
+      readonly: is_ci
+    )
+    
+    # Use CircleCI build number
+    increment_build_number(
+      build_number: ENV['CIRCLE_BUILD_NUM']
+    )
+    
+    # Build
+    build_app(
+      scheme: "MyApp",
+      export_method: "app-store",
+      output_directory: ENV['FL_OUTPUT_DIR'] + '/gym'
+    )
+    
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Deploy to App Store"
+  lane :release do
+    match(type: "appstore", readonly: is_ci)
+    
+    build_app(
+      scheme: "MyApp",
+      export_method: "app-store"
+    )
+    
+    upload_to_app_store(
+      submit_for_review: false,
+      automatic_release: false
+    )
+  end
+
+  after_all do |lane|
+    clean_build_artifacts if is_ci
+  end
+
+  error do |lane, exception|
+    puts "Error in lane #{lane}: #{exception}"
+  end
+end
+```
+
+## Best Practices
+
+### 1. Use Resource Classes Wisely
+
+CircleCI offers different macOS resource classes:
+
+```yaml
+# Medium resource (recommended for most projects)
+resource_class: m4pro.medium
+
+# Large resource (for large projects)
+resource_class: m4pro.large
+```
+
+### 2. Enable Caching
+
+Cache these directories to speed up builds:
+
+```yaml
+# Gems
+- restore_cache:
+    keys:
+      - gems-v1-{{ checksum "Gemfile.lock" }}
+- save_cache:
+    key: gems-v1-{{ checksum "Gemfile.lock" }}
+    paths:
+      - vendor/bundle
+
+# CocoaPods
+- restore_cache:
+    keys:
+      - pods-v1-{{ checksum "Podfile.lock" }}
+- save_cache:
+    key: pods-v1-{{ checksum "Podfile.lock" }}
+    paths:
+      - Pods
+```
+
+### 3. Parallelize Tests
+
+```yaml
+jobs:
+  test:
+    parallelism: 4
+    steps:
+      - run:
+          command: |
+            bundle exec fastlane test
+```
+
+### 4. Set Output Directory
+
+Always set `FL_OUTPUT_DIR` in CircleCI:
+
+```yaml
+environment:
+  FL_OUTPUT_DIR: output
+```
+
+### 5. Store Artifacts
+
+Store important build outputs:
+
+```yaml
+- store_artifacts:
+    path: output/MyApp.ipa
+- store_artifacts:
+    path: output/MyApp.app.dSYM.zip
+- store_test_results:
+    path: output/scan
+```
+
+## Common Issues
+
+### Keychain Errors
+
+**Problem:** Permission denied or keychain locked
+
+**Solution:** Ensure `setup_circle_ci` is called before any code signing:
+
+```ruby
+before_all do
+  setup_circle_ci
+end
+```
+
+### Match Authentication
+
+**Problem:** Can't access match repository
+
+**Solution:** Use SSH keys or personal access tokens:
+
+```bash
+# In CircleCI project settings, add SSH key
+# Or use HTTPS with token
+MATCH_GIT_URL=https://github.com/your-org/certificates.git
+MATCH_GIT_BASIC_AUTHORIZATION=base64(username:token)
+```
+
+### Timeout Issues
+
+**Problem:** Build times out
+
+**Solution:** Increase timeout or disable keychain timeout:
+
+```ruby
+setup_ci(
+  provider: "circleci",
+  timeout: 0  # No timeout
+)
+```
+
+## Related Actions
+
+- [setup_ci](/actions/setup_ci) - Generic CI setup
+- [setup_travis](/actions/setup_travis) - Travis CI setup
+- [match](/actions/match) - Code signing management
+- [is_ci](/actions/is_ci) - Detect CI environment

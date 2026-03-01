@@ -1,0 +1,493 @@
+---
+title: Testing Actions
+description: Run tests and capture screenshots for your mobile apps
+---
+
+## Overview
+
+fastlane provides comprehensive testing actions for both iOS and Android. These actions help you run unit tests, UI tests, and generate screenshots automatically.
+
+## iOS Testing Actions
+
+### run_tests
+
+Run your iOS and macOS tests using scan.
+
+<Note>
+`scan` is an alias for `run_tests`.
+</Note>
+
+#### Basic Usage
+
+```ruby
+run_tests
+```
+
+#### Parameters
+
+<ParamField path="workspace" type="string">
+  Path to the workspace file
+</ParamField>
+
+<ParamField path="project" type="string">
+  Path to the project file (alternative to workspace)
+</ParamField>
+
+<ParamField path="scheme" type="string">
+  The scheme to test
+</ParamField>
+
+<ParamField path="device" type="string">
+  The simulator device to test on
+</ParamField>
+
+<ParamField path="devices" type="array">
+  Array of devices to test on
+</ParamField>
+
+<ParamField path="clean" type="boolean" default="false">
+  Clean the project before building
+</ParamField>
+
+<ParamField path="code_coverage" type="boolean" default="false">
+  Enable code coverage
+</ParamField>
+
+<ParamField path="derived_data_path" type="string">
+  Custom derived data path
+</ParamField>
+
+<ParamField path="result_bundle" type="boolean" default="false">
+  Generate result bundle
+</ParamField>
+
+<ParamField path="output_directory" type="string">
+  Directory for test output
+</ParamField>
+
+<ParamField path="fail_build" type="boolean" default="true">
+  Fail the build if tests fail
+</ParamField>
+
+<ParamField path="only_testing" type="array">
+  Array of specific tests to run
+</ParamField>
+
+<ParamField path="skip_testing" type="array">
+  Array of tests to skip
+</ParamField>
+
+<ParamField path="build_for_testing" type="boolean" default="false">
+  Build for testing only (don't run tests)
+</ParamField>
+
+<ParamField path="test_without_building" type="boolean" default="false">
+  Test without building
+</ParamField>
+
+#### Return Value
+
+Returns a hash with test results:
+- `:number_of_tests` - Total test count
+- `:number_of_failures` - Number of failed tests
+- `:number_of_retries` - Number of retried tests
+- `:number_of_tests_excluding_retries`
+- `:number_of_failures_excluding_retries`
+
+#### Shared Values
+
+- `SCAN_DERIVED_DATA_PATH` - Path to derived data
+- `SCAN_GENERATED_PLIST_FILE` - Generated plist file path
+- `SCAN_GENERATED_PLIST_FILES` - All generated plist files
+- `SCAN_GENERATED_XCRESULT_PATH` - Path to .xcresult bundle
+- `SCAN_ZIP_BUILD_PRODUCTS_PATH` - Path to zipped build products
+
+#### Examples
+
+```ruby
+# Basic test run
+run_tests
+
+# Using scan alias
+scan
+
+# Test specific scheme
+run_tests(
+  workspace: "App.xcworkspace",
+  scheme: "MyTests",
+  clean: false
+)
+
+# Build for testing
+run_tests(
+  derived_data_path: "my_folder",
+  build_for_testing: true
+)
+
+# Run tests using derived data from previous build
+run_tests(
+  derived_data_path: "my_folder",
+  test_without_building: true
+)
+
+# Run from existing xctestrun package
+run_tests(
+  xctestrun: "/path/to/mytests.xctestrun"
+)
+
+# Test on specific devices
+run_tests(
+  devices: ["iPhone 14 Pro", "iPad Pro (12.9-inch)"]
+)
+
+# Enable code coverage
+run_tests(
+  scheme: "MyApp",
+  code_coverage: true,
+  result_bundle: true
+)
+
+# Run specific tests
+run_tests(
+  only_testing: ["MyAppTests/LoginTests"]
+)
+
+# Skip specific tests
+run_tests(
+  skip_testing: ["MyAppTests/SlowTests"]
+)
+```
+
+#### Supported Platforms
+
+- iOS
+- macOS
+
+---
+
+### snapshot (capture_ios_screenshots)
+
+Automatically capture screenshots of your iOS app in multiple languages and device types.
+
+<Note>
+`snapshot` and `capture_screenshots` are aliases for `capture_ios_screenshots`.
+</Note>
+
+#### Basic Usage
+
+```ruby
+snapshot
+```
+
+#### Key Parameters
+
+<ParamField path="workspace" type="string">
+  Path to the workspace file
+</ParamField>
+
+<ParamField path="scheme" type="string">
+  The scheme for screenshots
+</ParamField>
+
+<ParamField path="devices" type="array">
+  Array of devices to capture screenshots on
+</ParamField>
+
+<ParamField path="languages" type="array">
+  Array of languages to capture
+</ParamField>
+
+<ParamField path="output_directory" type="string">
+  Directory for screenshots
+</ParamField>
+
+<ParamField path="clear_previous_screenshots" type="boolean" default="false">
+  Clear existing screenshots before capturing
+</ParamField>
+
+#### Examples
+
+```ruby
+# Basic screenshot capture
+snapshot
+
+# Specify devices and languages
+snapshot(
+  scheme: "MyApp",
+  devices: [
+    "iPhone 14 Pro",
+    "iPhone 14 Pro Max",
+    "iPad Pro (12.9-inch)"
+  ],
+  languages: [
+    "en-US",
+    "de-DE",
+    "es-ES"
+  ]
+)
+
+# With custom output directory
+snapshot(
+  output_directory: "./screenshots",
+  clear_previous_screenshots: true
+)
+```
+
+<Tip>
+Use snapshot in combination with `upload_to_app_store` to automatically upload screenshots to App Store Connect.
+</Tip>
+
+---
+
+### trainer
+
+Convert xcodebuild test results to JUnit format for CI integration.
+
+#### Basic Usage
+
+```ruby
+trainer(
+  path: "./build/tests",
+  output_directory: "./test-results"
+)
+```
+
+---
+
+## Android Testing Actions
+
+### screengrab (capture_android_screenshots)
+
+Automatically capture screenshots of your Android app.
+
+<Note>
+`screengrab` is an alias for `capture_android_screenshots`.
+</Note>
+
+#### Basic Usage
+
+```ruby
+screengrab
+```
+
+#### Key Parameters
+
+<ParamField path="app_package_name" type="string">
+  The package name of your app
+</ParamField>
+
+<ParamField path="tests_package_name" type="string">
+  The package name of your tests
+</ParamField>
+
+<ParamField path="locales" type="array">
+  Array of locales to capture
+</ParamField>
+
+<ParamField path="device_type" type="string">
+  Device type (phone, sevenInch, tenInch, tv, wear)
+</ParamField>
+
+<ParamField path="output_directory" type="string">
+  Directory for screenshots
+</ParamField>
+
+<ParamField path="clear_previous_screenshots" type="boolean" default="false">
+  Clear existing screenshots
+</ParamField>
+
+#### Examples
+
+```ruby
+# Basic Android screenshots
+screengrab
+
+# With specific locales
+screengrab(
+  app_package_name: "com.example.app",
+  locales: ["en-US", "fr-FR", "ja-JP"],
+  clear_previous_screenshots: true
+)
+
+# Different device types
+screengrab(
+  device_type: "phone",
+  output_directory: "./fastlane/metadata/android"
+)
+```
+
+---
+
+## Complete Testing Workflows
+
+### iOS Test and Screenshot Workflow
+
+```ruby
+lane :test do
+  # Run tests with code coverage
+  run_tests(
+    scheme: "MyApp",
+    code_coverage: true,
+    devices: ["iPhone 14 Pro"],
+    fail_build: true
+  )
+  
+  # Capture screenshots
+  snapshot(
+    scheme: "MyAppUITests",
+    devices: [
+      "iPhone 14 Pro",
+      "iPhone 14 Pro Max",
+      "iPad Pro (12.9-inch)"
+    ],
+    languages: ["en-US", "es-ES", "de-DE"]
+  )
+  
+  # Send results to Slack
+  slack(
+    message: "Tests passed! Screenshots captured.",
+    success: true
+  )
+end
+```
+
+### Android Test Workflow
+
+```ruby
+lane :test do
+  # Run tests
+  gradle(
+    task: "test",
+    build_type: "Debug"
+  )
+  
+  # Capture screenshots
+  screengrab(
+    locales: ["en-US", "de-DE", "es-ES"],
+    clear_previous_screenshots: true
+  )
+end
+```
+
+### Continuous Integration Workflow
+
+```ruby
+lane :ci do
+  # Setup CI environment
+  setup_ci
+  
+  # Run tests
+  run_tests(
+    scheme: "MyApp",
+    devices: ["iPhone 14 Pro"],
+    code_coverage: true,
+    result_bundle: true,
+    output_directory: "./test_output"
+  )
+  
+  # Convert to JUnit format
+  trainer(
+    path: "./test_output",
+    output_directory: "./junit_results"
+  )
+  
+  # Upload coverage reports
+  # (use codecov, coveralls, or other coverage service)
+end
+```
+
+### Parallel Testing
+
+```ruby
+lane :test_all do
+  # Test on multiple devices in parallel
+  run_tests(
+    scheme: "MyApp",
+    devices: [
+      "iPhone 14 Pro",
+      "iPhone SE (3rd generation)",
+      "iPad Pro (12.9-inch)"
+    ],
+    parallel_testing: true,
+    max_concurrent_simulators: 3
+  )
+end
+```
+
+### Build and Test Separately
+
+```ruby
+lane :build_for_testing do
+  run_tests(
+    scheme: "MyApp",
+    build_for_testing: true,
+    derived_data_path: "./DerivedData"
+  )
+end
+
+lane :test_without_building do
+  run_tests(
+    scheme: "MyApp",
+    test_without_building: true,
+    derived_data_path: "./DerivedData"
+  )
+end
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Enable code coverage">
+    Track your test coverage to ensure code quality:
+    
+    ```ruby
+    run_tests(
+      code_coverage: true,
+      result_bundle: true
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Use result bundles">
+    Result bundles contain rich test information for debugging:
+    
+    ```ruby
+    run_tests(
+      result_bundle: true,
+      output_directory: "./test_results"
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Test on representative devices">
+    Test on devices your users actually use:
+    
+    ```ruby
+    run_tests(
+      devices: [
+        "iPhone 14 Pro",      # Latest flagship
+        "iPhone SE (3rd gen)", # Smaller/older device
+        "iPad Pro"            # Tablet
+      ]
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Separate build and test steps">
+    For faster CI, build once and test multiple times:
+    
+    ```ruby
+    # Build
+    run_tests(build_for_testing: true)
+    
+    # Test on different configurations
+    run_tests(test_without_building: true)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Actions
+
+- [build_app](/actions/building#build_app) - Build your app
+- [upload_to_app_store](/actions/app-store#upload_to_app_store) - Upload with screenshots
+- [slack](/actions/notifications#slack) - Send test results

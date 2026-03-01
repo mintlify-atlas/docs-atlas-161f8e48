@@ -1,0 +1,475 @@
+---
+title: sigh
+description: Create, renew, download, and repair provisioning profiles
+---
+
+## Overview
+
+sigh automates the process of creating, renewing, downloading, and repairing provisioning profiles. It handles all types of profiles: development, ad hoc, App Store, and enterprise.
+
+<Info>
+sigh works seamlessly with [cert](/tools/cert) for certificates and [match](/tools/match) for team provisioning management.
+</Info>
+
+## Installation
+
+sigh is part of fastlane. Install it with:
+
+```bash
+fastlane sigh
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Run sigh">
+    ```bash
+    fastlane sigh
+    ```
+    
+    sigh will automatically create or renew the provisioning profile for your app.
+  </Step>
+  
+  <Step title="Profile is ready">
+    The provisioning profile is downloaded and installed in `~/Library/MobileDevice/Provisioning Profiles/`.
+  </Step>
+</Steps>
+
+## Profile Types
+
+<CodeGroup>
+
+```bash App Store (default)
+fastlane sigh
+```
+
+```bash Development
+fastlane sigh development
+```
+
+```bash Ad Hoc
+fastlane sigh --adhoc
+```
+
+```bash Developer ID
+fastlane sigh --developer_id
+```
+
+</CodeGroup>
+
+## Key Options
+
+<ParamField path="app_identifier" type="string" required>
+  The bundle identifier of your app.
+  
+  ```ruby
+  sigh(app_identifier: "com.example.app")
+  ```
+</ParamField>
+
+<ParamField path="username" type="string">
+  Your Apple ID username.
+  
+  ```ruby
+  sigh(username: "user@example.com")
+  ```
+</ParamField>
+
+<ParamField path="adhoc" type="boolean" default="false">
+  Generate an Ad Hoc profile instead of App Store.
+  
+  ```ruby
+  sigh(adhoc: true)
+  ```
+</ParamField>
+
+<ParamField path="development" type="boolean" default="false">
+  Generate a Development profile.
+  
+  ```ruby
+  sigh(development: true)
+  ```
+</ParamField>
+
+<ParamField path="developer_id" type="boolean" default="false">
+  Generate a Developer ID profile (macOS).
+  
+  ```ruby
+  sigh(developer_id: true)
+  ```
+</ParamField>
+
+<ParamField path="provisioning_name" type="string">
+  The name of the provisioning profile on the Apple Developer Portal.
+  
+  ```ruby
+  sigh(provisioning_name: "MyApp Production Profile")
+  ```
+</ParamField>
+
+<ParamField path="force" type="boolean" default="false">
+  Renew provisioning profiles regardless of state.
+  
+  ```ruby
+  sigh(force: true)
+  ```
+</ParamField>
+
+<ParamField path="readonly" type="boolean" default="false">
+  Only fetch existing profiles, don't generate new ones.
+  
+  ```ruby
+  sigh(readonly: true)
+  ```
+</ParamField>
+
+<ParamField path="skip_install" type="boolean" default="false">
+  Skip installing the profile to the local machine.
+  
+  ```ruby
+  sigh(skip_install: true)
+  ```
+</ParamField>
+
+<ParamField path="filename" type="string">
+  Filename for the generated profile (must include .mobileprovision).
+  
+  ```ruby
+  sigh(filename: "MyApp.mobileprovision")
+  ```
+</ParamField>
+
+<ParamField path="output_path" type="string" default=".">
+  Directory where the profile should be stored.
+  
+  ```ruby
+  sigh(output_path: "./profiles")
+  ```
+</ParamField>
+
+<ParamField path="platform" type="string" default="ios">
+  Platform for the profile (ios, tvos, macos, catalyst).
+  
+  ```ruby
+  sigh(platform: "tvos")
+  ```
+</ParamField>
+
+<ParamField path="team_id" type="string">
+  The ID of your Developer Portal team.
+  
+  ```ruby
+  sigh(team_id: "Q2CBPJ58CA")
+  ```
+</ParamField>
+
+<ParamField path="team_name" type="string">
+  The name of your Developer Portal team.
+  
+  ```ruby
+  sigh(team_name: "Company Inc")
+  ```
+</ParamField>
+
+<ParamField path="cert_id" type="string">
+  The ID of the code signing certificate to use.
+  
+  ```ruby
+  sigh(cert_id: "78ADL6LVAA")
+  ```
+</ParamField>
+
+<ParamField path="include_all_certificates" type="boolean" default="false">
+  Include all matching certificates in the profile (development only).
+  
+  ```ruby
+  sigh(include_all_certificates: true)
+  ```
+</ParamField>
+
+<ParamField path="skip_fetch_profiles" type="boolean" default="false">
+  Skip verification of existing profiles (useful for large accounts).
+  
+  ```ruby
+  sigh(skip_fetch_profiles: true)
+  ```
+</ParamField>
+
+<ParamField path="include_mac_in_profiles" type="boolean" default="false">
+  Include Apple Silicon Mac devices in iOS/iPadOS profiles.
+  
+  ```ruby
+  sigh(include_mac_in_profiles: true)
+  ```
+</ParamField>
+
+## CLI Commands
+
+<CodeGroup>
+
+```bash Create/renew profile
+fastlane sigh
+```
+
+```bash Development profile
+fastlane sigh development
+```
+
+```bash Ad Hoc profile
+fastlane sigh --adhoc
+```
+
+```bash Download all profiles
+fastlane sigh download_all
+```
+
+```bash Repair profiles
+fastlane sigh repair
+```
+
+```bash Resign IPA
+fastlane sigh resign
+```
+
+```bash Manage local profiles
+fastlane sigh manage
+```
+
+</CodeGroup>
+
+## Using with fastlane
+
+### Basic Usage
+
+```ruby
+lane :provision do
+  cert
+  sigh
+end
+```
+
+### Development Profile
+
+```ruby
+lane :dev_provision do
+  cert(development: true)
+  sigh(
+    development: true,
+    app_identifier: "com.example.app"
+  )
+end
+```
+
+### Ad Hoc Profile
+
+```ruby
+lane :adhoc_provision do
+  cert
+  sigh(
+    adhoc: true,
+    app_identifier: "com.example.app",
+    provisioning_name: "MyApp AdHoc"
+  )
+end
+```
+
+### Force Renewal
+
+```ruby
+lane :refresh_profiles do
+  sigh(
+    force: true,
+    app_identifier: "com.example.app"
+  )
+end
+```
+
+### Multiple App Identifiers
+
+```ruby
+lane :all_profiles do
+  ["com.example.app", "com.example.app.watchkit"].each do |identifier|
+    sigh(
+      app_identifier: identifier,
+      provisioning_name: "#{identifier} Production"
+    )
+  end
+end
+```
+
+## Download All Profiles
+
+Download all provisioning profiles from your account:
+
+```bash
+fastlane sigh download_all
+```
+
+With Xcode-managed profiles:
+
+```bash
+fastlane sigh download_all --download_xcode_profiles
+```
+
+## Repair Profiles
+
+Repair all expired or invalid provisioning profiles:
+
+```bash
+fastlane sigh repair
+```
+
+## Resign IPA
+
+Resign an existing IPA with a different provisioning profile:
+
+```bash
+fastlane sigh resign ./path/to/app.ipa \
+  -i "iPhone Distribution: Company Inc" \
+  -p "path/to/profile.mobileprovision"
+```
+
+With options:
+
+```bash
+fastlane sigh resign ./app.ipa \
+  -i "iPhone Distribution: Company Inc" \
+  -p "com.example.app=./profile.mobileprovision" \
+  -p "com.example.app.watchkit=./watch_profile.mobileprovision" \
+  -d "My App Name" \
+  -e "./entitlements.plist" \
+  --short_version "1.2.0" \
+  --bundle_version "42"
+```
+
+## Manage Local Profiles
+
+Manage provisioning profiles installed on your system:
+
+```bash
+# Remove expired profiles
+fastlane sigh manage --clean_expired
+
+# Remove profiles matching pattern
+fastlane sigh manage --clean_pattern "iOS Team Provisioning"
+
+# Force removal (required on CI)
+fastlane sigh manage --force --clean_expired
+```
+
+## App Store Connect API
+
+sigh supports the App Store Connect API for authentication:
+
+```ruby
+sigh(
+  api_key_path: "./AuthKey.json"
+)
+```
+
+Or use a hash:
+
+```ruby
+sigh(
+  api_key: {
+    key_id: "ABC123",
+    issuer_id: "XYZ789",
+    key_filepath: "./AuthKey_ABC123.p8"
+  }
+)
+```
+
+## Environment Variables
+
+<ResponseField name="SIGH_USERNAME" type="string">
+  Your Apple ID username
+</ResponseField>
+
+<ResponseField name="SIGH_APP_IDENTIFIER" type="string">
+  The bundle identifier of your app
+</ResponseField>
+
+<ResponseField name="SIGH_TEAM_ID" type="string">
+  The ID of your Developer Portal team
+</ResponseField>
+
+<ResponseField name="SIGH_AD_HOC" type="boolean">
+  Generate an Ad Hoc profile
+</ResponseField>
+
+<ResponseField name="SIGH_DEVELOPMENT" type="boolean">
+  Generate a Development profile
+</ResponseField>
+
+<ResponseField name="SIGH_PROVISIONING_PROFILE_NAME" type="string">
+  The name of the provisioning profile
+</ResponseField>
+
+<ResponseField name="SIGH_OUTPUT_PATH" type="string">
+  Directory to store the profile
+</ResponseField>
+
+<ResponseField name="SIGH_FORCE" type="boolean">
+  Force profile renewal
+</ResponseField>
+
+## Tips & Best Practices
+
+<Tip>
+**Use match for teams**: For team environments, use [match](/tools/match) instead of sigh for better synchronization.
+</Tip>
+
+<Warning>
+**Readonly mode**: Use `readonly: true` when you only want to download existing profiles without creating new ones.
+</Warning>
+
+<Tip>
+**Name your profiles**: Use descriptive names with `provisioning_name` to easily identify profiles in the Developer Portal.
+</Tip>
+
+<Check>
+**Include all certificates**: For development profiles shared across teams, use `include_all_certificates: true`.
+</Check>
+
+## Troubleshooting
+
+### Profile not found
+
+Ensure the app identifier exists in the Developer Portal:
+
+```ruby
+sigh(app_identifier: "com.example.app")
+```
+
+### Certificate mismatch
+
+Specify the certificate to use:
+
+```ruby
+sigh(
+  cert_id: "78ADL6LVAA",
+  app_identifier: "com.example.app"
+)
+```
+
+### Too many profiles
+
+Skip fetching existing profiles for faster execution:
+
+```ruby
+sigh(skip_fetch_profiles: true)
+```
+
+### Wrong team
+
+Specify the team explicitly:
+
+```ruby
+sigh(team_id: "Q2CBPJ58CA")
+```
+
+## Related Tools
+
+- [cert](/tools/cert) - Manage code signing certificates
+- [match](/tools/match) - Sync certificates and profiles across team
+- [gym](/tools/gym) - Build your app

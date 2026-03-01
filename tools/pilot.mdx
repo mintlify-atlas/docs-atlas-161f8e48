@@ -1,0 +1,496 @@
+---
+title: pilot
+description: Manage your TestFlight builds and testers with ease
+---
+
+## Overview
+
+pilot makes it easy to manage your TestFlight builds and testers. Upload builds, invite testers, and manage beta testing for your iOS apps through the App Store Connect API.
+
+<Info>
+pilot is the best way to automate TestFlight deployments and manage beta testers.
+</Info>
+
+## Installation
+
+pilot is part of fastlane. Install it with:
+
+```bash
+fastlane pilot
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Upload a build">
+    ```bash
+    fastlane pilot upload
+    ```
+  </Step>
+  
+  <Step title="Add testers">
+    ```bash
+    fastlane pilot add john@example.com jane@example.com
+    ```
+  </Step>
+  
+  <Step title="List testers">
+    ```bash
+    fastlane pilot list
+    ```
+  </Step>
+</Steps>
+
+## CLI Commands
+
+<CodeGroup>
+
+```bash Upload build
+fastlane pilot upload
+```
+
+```bash Distribute build
+fastlane pilot distribute
+```
+
+```bash List builds
+fastlane pilot builds
+```
+
+```bash Add testers
+fastlane pilot add email@example.com
+```
+
+```bash List testers
+fastlane pilot list
+```
+
+```bash Find tester
+fastlane pilot find email@example.com
+```
+
+```bash Remove tester
+fastlane pilot remove email@example.com
+```
+
+```bash Export testers
+fastlane pilot export
+```
+
+```bash Import testers
+fastlane pilot import
+```
+
+</CodeGroup>
+
+## Uploading Builds
+
+### Basic Upload
+
+```ruby
+lane :beta do
+  build_app
+  pilot
+end
+```
+
+### Upload with Changelog
+
+```ruby
+lane :beta do
+  build_app
+  pilot(
+    changelog: "Bug fixes and performance improvements"
+  )
+end
+```
+
+### Upload and Skip Distribution
+
+```ruby
+pilot(
+  skip_submission: true,
+  skip_waiting_for_build_processing: true
+)
+```
+
+## Key Options
+
+<ParamField path="username" type="string">
+  Your Apple ID username.
+  
+  ```ruby
+  pilot(username: "user@example.com")
+  ```
+</ParamField>
+
+<ParamField path="app_identifier" type="string">
+  The bundle identifier of your app.
+  
+  ```ruby
+  pilot(app_identifier: "com.example.app")
+  ```
+</ParamField>
+
+<ParamField path="ipa" type="string">
+  Path to the IPA file to upload.
+  
+  ```ruby
+  pilot(ipa: "./build/MyApp.ipa")
+  ```
+</ParamField>
+
+<ParamField path="changelog" type="string">
+  Provide the 'What to Test' text when uploading a new build.
+  
+  ```ruby
+  pilot(changelog: "Added dark mode support")
+  ```
+</ParamField>
+
+<ParamField path="skip_submission" type="boolean" default="false">
+  Skip the distributing action and only upload the IPA file.
+  
+  ```ruby
+  pilot(skip_submission: true)
+  ```
+</ParamField>
+
+<ParamField path="skip_waiting_for_build_processing" type="boolean" default="false">
+  Skip waiting for build processing to complete.
+  
+  ```ruby
+  pilot(skip_waiting_for_build_processing: true)
+  ```
+</ParamField>
+
+<ParamField path="distribute_external" type="boolean" default="false">
+  Distribute the build to external testers. Requires `groups` option.
+  
+  ```ruby
+  pilot(
+    distribute_external: true,
+    groups: ["Beta Testers"]
+  )
+  ```
+</ParamField>
+
+<ParamField path="notify_external_testers" type="boolean">
+  Should external testers be notified?
+  
+  ```ruby
+  pilot(notify_external_testers: true)
+  ```
+</ParamField>
+
+<ParamField path="groups" type="array">
+  Associate testers to groups by group name.
+  
+  ```ruby
+  pilot(
+    groups: ["Beta Testers", "Internal Team"]
+  )
+  ```
+</ParamField>
+
+<ParamField path="beta_app_review_info" type="hash">
+  Beta app review information for contact info and demo account.
+  
+  ```ruby
+  pilot(
+    beta_app_review_info: {
+      contact_email: "email@example.com",
+      contact_first_name: "John",
+      contact_last_name: "Doe",
+      contact_phone: "+1 555-5555",
+      demo_account_name: "demo@example.com",
+      demo_account_password: "password"
+    }
+  )
+  ```
+</ParamField>
+
+<ParamField path="beta_app_description" type="string">
+  Provide the 'Beta App Description' when uploading a new build.
+  
+  ```ruby
+  pilot(beta_app_description: "This app helps you manage your tasks")
+  ```
+</ParamField>
+
+<ParamField path="beta_app_feedback_email" type="string">
+  Beta app feedback email.
+  
+  ```ruby
+  pilot(beta_app_feedback_email: "feedback@example.com")
+  ```
+</ParamField>
+
+<ParamField path="localized_build_info" type="hash">
+  Localized 'What to Test' text by locale.
+  
+  ```ruby
+  pilot(
+    localized_build_info: {
+      "en-US" => { whats_new: "Bug fixes" },
+      "de-DE" => { whats_new: "Fehlerbehebungen" }
+    }
+  )
+  ```
+</ParamField>
+
+<ParamField path="app_version" type="string">
+  The version number to distribute.
+  
+  ```ruby
+  pilot(app_version: "1.2.0")
+  ```
+</ParamField>
+
+<ParamField path="build_number" type="string">
+  The build number to distribute.
+  
+  ```ruby
+  pilot(build_number: "42")
+  ```
+</ParamField>
+
+<ParamField path="expire_previous_builds" type="boolean" default="false">
+  Expire previous builds.
+  
+  ```ruby
+  pilot(expire_previous_builds: true)
+  ```
+</ParamField>
+
+<ParamField path="wait_processing_interval" type="integer" default="30">
+  Interval in seconds to wait for App Store Connect processing.
+  
+  ```ruby
+  pilot(wait_processing_interval: 60)
+  ```
+</ParamField>
+
+## Managing Testers
+
+### Add Individual Testers
+
+```bash
+fastlane pilot add john@example.com -g "Beta Testers"
+```
+
+Or in your Fastfile:
+
+```ruby
+lane :add_tester do
+  pilot(
+    email: "john@example.com",
+    first_name: "John",
+    last_name: "Doe",
+    groups: ["Beta Testers"]
+  )
+end
+```
+
+### Import Testers from CSV
+
+Create a `testers.csv` file:
+
+```csv
+First Name,Last Name,Email,Groups
+John,Doe,john@example.com,"Beta Testers"
+Jane,Smith,jane@example.com,"Internal Team,Beta Testers"
+```
+
+Then import:
+
+```bash
+fastlane pilot import
+```
+
+### Export Testers to CSV
+
+```bash
+fastlane pilot export
+```
+
+### List All Testers
+
+```bash
+fastlane pilot list -a com.example.app
+```
+
+### Find Specific Tester
+
+```bash
+fastlane pilot find john@example.com
+```
+
+### Remove Tester
+
+```bash
+fastlane pilot remove john@example.com
+```
+
+## Distribute Existing Build
+
+Distribute a previously uploaded build without uploading a new one:
+
+```ruby
+lane :distribute_beta do
+  pilot(
+    distribute_only: true,
+    app_version: "1.2.0",
+    build_number: "42",
+    groups: ["Beta Testers"],
+    notify_external_testers: true
+  )
+end
+```
+
+## Using with fastlane
+
+### Complete Beta Lane
+
+```ruby
+lane :beta do
+  increment_build_number
+  build_app(scheme: "MyApp")
+  
+  pilot(
+    skip_waiting_for_build_processing: false,
+    changelog: "Bug fixes and improvements",
+    distribute_external: true,
+    groups: ["Beta Testers"],
+    notify_external_testers: true,
+    beta_app_review_info: {
+      contact_email: "support@example.com",
+      contact_first_name: "John",
+      contact_last_name: "Doe",
+      contact_phone: "+1 555-5555"
+    }
+  )
+end
+```
+
+### Upload Only Lane
+
+```ruby
+lane :upload_to_testflight do
+  build_app
+  pilot(
+    skip_submission: true,
+    skip_waiting_for_build_processing: true
+  )
+end
+```
+
+### Distribute Later Lane
+
+```ruby
+lane :distribute_testflight do
+  pilot(
+    distribute_only: true,
+    build_number: ENV["BUILD_NUMBER"],
+    groups: ["Beta Testers"],
+    notify_external_testers: true,
+    changelog: "Ready for testing!"
+  )
+end
+```
+
+## App Store Connect API
+
+pilot supports the App Store Connect API for authentication:
+
+```ruby
+pilot(
+  api_key_path: "./AuthKey.json"
+)
+```
+
+Or use a hash:
+
+```ruby
+pilot(
+  api_key: {
+    key_id: "ABC123",
+    issuer_id: "XYZ789",
+    key_filepath: "./AuthKey_ABC123.p8"
+  }
+)
+```
+
+## Environment Variables
+
+<ResponseField name="PILOT_USERNAME" type="string">
+  Your Apple ID username
+</ResponseField>
+
+<ResponseField name="PILOT_APP_IDENTIFIER" type="string">
+  The bundle identifier of your app
+</ResponseField>
+
+<ResponseField name="PILOT_IPA" type="string">
+  Path to the IPA file
+</ResponseField>
+
+<ResponseField name="PILOT_CHANGELOG" type="string">
+  The 'What to Test' text
+</ResponseField>
+
+<ResponseField name="PILOT_SKIP_SUBMISSION" type="boolean">
+  Skip distributing the build
+</ResponseField>
+
+<ResponseField name="PILOT_DISTRIBUTE_EXTERNAL" type="boolean">
+  Distribute to external testers
+</ResponseField>
+
+<ResponseField name="PILOT_GROUPS" type="string">
+  Comma-separated list of group names
+</ResponseField>
+
+## Tips & Best Practices
+
+<Tip>
+**Use groups**: Organize your testers into groups for easier management.
+</Tip>
+
+<Warning>
+**External testing requires review**: External TestFlight builds must go through Apple's beta review process.
+</Warning>
+
+<Tip>
+**Skip waiting on CI**: Use `skip_waiting_for_build_processing: true` on CI to save time.
+</Tip>
+
+<Check>
+**Provide changelog**: Always include a changelog to help testers know what to test.
+</Check>
+
+## Troubleshooting
+
+### Build not found
+
+Make sure the build has finished processing in App Store Connect before trying to distribute it.
+
+### Tester already exists
+
+You can safely add existing testers - pilot will just associate them with the specified groups.
+
+### Wrong team selected
+
+Specify the team explicitly:
+
+```ruby
+pilot(
+  team_id: "123456789"
+)
+```
+
+## Related Tools
+
+- [gym](/tools/gym) - Build your iOS app
+- [deliver](/tools/deliver) - Upload to App Store
+- [match](/tools/match) - Sync certificates and profiles

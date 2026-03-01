@@ -1,0 +1,438 @@
+---
+title: cert
+description: Automatically create and maintain iOS code signing certificates
+---
+
+## Overview
+
+cert automatically creates and maintains iOS code signing certificates. It ensures you always have a valid certificate and stores it in your local keychain.
+
+<Info>
+cert works best when combined with [sigh](/tools/sigh) for provisioning profiles and [match](/tools/match) for team certificate management.
+</Info>
+
+## Installation
+
+cert is part of fastlane. Install it with:
+
+```bash
+fastlane cert
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Run cert">
+    ```bash
+    fastlane cert
+    ```
+    
+    cert will check if you have a valid certificate and create one if needed.
+  </Step>
+  
+  <Step title="Certificate is ready">
+    The certificate is automatically added to your keychain and ready to use.
+  </Step>
+</Steps>
+
+## Certificate Types
+
+<CodeGroup>
+
+```bash Development Certificate
+fastlane cert --development
+```
+
+```bash Distribution Certificate (default)
+fastlane cert
+```
+
+```bash Apple Development (Xcode 11+)
+fastlane cert --generate_apple_certs
+```
+
+```bash Apple Distribution (Xcode 11+)
+fastlane cert --generate_apple_certs
+```
+
+</CodeGroup>
+
+## Advanced Certificate Types
+
+For macOS applications:
+
+<CodeGroup>
+
+```bash Mac Installer Distribution
+fastlane cert --type mac_installer_distribution
+```
+
+```bash Developer ID Installer
+fastlane cert --type developer_id_installer
+```
+
+```bash Developer ID Application
+fastlane cert --type developer_id_application
+```
+
+</CodeGroup>
+
+## Key Options
+
+<ParamField path="development" type="boolean" default="false">
+  Create a development certificate instead of a distribution certificate.
+  
+  ```ruby
+  cert(development: true)
+  ```
+</ParamField>
+
+<ParamField path="type" type="string">
+  Create a specific certificate type. Options: `mac_installer_distribution`, `developer_id_installer`, `developer_id_application`, `developer_id_kext`.
+  
+  ```ruby
+  cert(type: "developer_id_application")
+  ```
+</ParamField>
+
+<ParamField path="force" type="boolean" default="false">
+  Create a certificate even if an existing certificate exists.
+  
+  ```ruby
+  cert(force: true)
+  ```
+</ParamField>
+
+<ParamField path="generate_apple_certs" type="boolean" default="auto">
+  Create Apple Development or Apple Distribution certificate (Xcode 11+).
+  
+  ```ruby
+  cert(generate_apple_certs: true)
+  ```
+</ParamField>
+
+<ParamField path="username" type="string">
+  Your Apple ID username.
+  
+  ```ruby
+  cert(username: "user@example.com")
+  ```
+</ParamField>
+
+<ParamField path="team_id" type="string">
+  The ID of your Developer Portal team.
+  
+  ```ruby
+  cert(team_id: "Q2CBPJ58CA")
+  ```
+</ParamField>
+
+<ParamField path="team_name" type="string">
+  The name of your Developer Portal team.
+  
+  ```ruby
+  cert(team_name: "Company Inc")
+  ```
+</ParamField>
+
+<ParamField path="filename" type="string">
+  The filename of the certificate to store.
+  
+  ```ruby
+  cert(filename: "my_cert.cer")
+  ```
+</ParamField>
+
+<ParamField path="output_path" type="string" default=".">
+  Directory to store certificates and private keys.
+  
+  ```ruby
+  cert(output_path: "./certificates")
+  ```
+</ParamField>
+
+<ParamField path="keychain_path" type="string">
+  Path to a custom keychain.
+  
+  ```ruby
+  cert(keychain_path: "/Library/Keychains/System.keychain")
+  ```
+</ParamField>
+
+<ParamField path="keychain_password" type="string">
+  Password for the custom keychain.
+  
+  ```ruby
+  cert(keychain_password: "password")
+  ```
+</ParamField>
+
+<ParamField path="platform" type="string" default="ios">
+  The platform to use (ios, macos, tvos).
+  
+  ```ruby
+  cert(platform: "macos")
+  ```
+</ParamField>
+
+## CLI Commands
+
+<CodeGroup>
+
+```bash Create certificate
+fastlane cert
+```
+
+```bash Development certificate
+fastlane cert --development
+```
+
+```bash Force new certificate
+fastlane cert --force
+```
+
+```bash Revoke expired certificates
+fastlane cert revoke_expired
+```
+
+</CodeGroup>
+
+## Using with fastlane
+
+### Basic Usage
+
+```ruby
+lane :certificates do
+  cert
+  sigh
+end
+```
+
+### Development Certificate
+
+```ruby
+lane :dev_certs do
+  cert(
+    development: true,
+    username: "user@example.com"
+  )
+end
+```
+
+### Distribution Certificate
+
+```ruby
+lane :dist_certs do
+  cert(
+    development: false,
+    username: "user@example.com",
+    team_id: "Q2CBPJ58CA"
+  )
+end
+```
+
+### Multiple Platforms
+
+```ruby
+lane :all_certs do
+  # iOS Distribution
+  cert(platform: "ios")
+  
+  # macOS Distribution
+  cert(platform: "macos")
+  
+  # tvOS Distribution
+  cert(platform: "tvos")
+end
+```
+
+### Custom Output
+
+```ruby
+lane :export_cert do
+  cert(
+    output_path: "./certificates",
+    filename: "distribution_cert.cer"
+  )
+end
+```
+
+## App Store Connect API
+
+cert supports the App Store Connect API for authentication:
+
+```ruby
+cert(
+  api_key_path: "./AuthKey.json"
+)
+```
+
+Or use a hash:
+
+```ruby
+cert(
+  api_key: {
+    key_id: "ABC123",
+    issuer_id: "XYZ789",
+    key_filepath: "./AuthKey_ABC123.p8"
+  }
+)
+```
+
+## Certificate Management
+
+### Check Existing Certificate
+
+cert will automatically check if you have a valid certificate:
+
+```bash
+fastlane cert
+```
+
+Output:
+```
+[cert] All required certificates are installed and valid! 🎉
+```
+
+### Create New Certificate
+
+Force creation of a new certificate:
+
+```bash
+fastlane cert --force
+```
+
+### Revoke Expired Certificates
+
+Clean up expired certificates:
+
+```bash
+fastlane cert revoke_expired
+```
+
+## Keychain Management
+
+### Custom Keychain
+
+Use a custom keychain instead of the login keychain:
+
+```ruby
+cert(
+  keychain_path: "/Users/admin/Library/Keychains/fastlane.keychain",
+  keychain_password: ENV["KEYCHAIN_PASSWORD"]
+)
+```
+
+### CI/CD Keychain Setup
+
+```ruby
+lane :setup_ci_keychain do
+  create_keychain(
+    name: "fastlane_keychain",
+    password: ENV["KEYCHAIN_PASSWORD"],
+    default_keychain: true,
+    unlock: true,
+    timeout: 3600
+  )
+  
+  cert(
+    keychain_path: "~/Library/Keychains/fastlane_keychain-db",
+    keychain_password: ENV["KEYCHAIN_PASSWORD"]
+  )
+end
+```
+
+## Environment Variables
+
+<ResponseField name="CERT_USERNAME" type="string">
+  Your Apple ID username
+</ResponseField>
+
+<ResponseField name="CERT_TEAM_ID" type="string">
+  The ID of your Developer Portal team
+</ResponseField>
+
+<ResponseField name="CERT_TEAM_NAME" type="string">
+  The name of your Developer Portal team
+</ResponseField>
+
+<ResponseField name="CERT_DEVELOPMENT" type="boolean">
+  Create a development certificate
+</ResponseField>
+
+<ResponseField name="CERT_FORCE" type="boolean">
+  Force certificate creation
+</ResponseField>
+
+<ResponseField name="CERT_OUTPUT_PATH" type="string">
+  Directory to store certificates
+</ResponseField>
+
+<ResponseField name="CERT_KEYCHAIN_PATH" type="string">
+  Path to custom keychain
+</ResponseField>
+
+<ResponseField name="CERT_KEYCHAIN_PASSWORD" type="string">
+  Password for the keychain
+</ResponseField>
+
+## Tips & Best Practices
+
+<Tip>
+**Use match for teams**: For team environments, use [match](/tools/match) instead of cert for better certificate synchronization.
+</Tip>
+
+<Warning>
+**Limit certificates**: Apple allows a maximum of 3 distribution certificates per account. Use `force: true` carefully.
+</Warning>
+
+<Tip>
+**Store safely**: Keep your certificate and private key files secure. Never commit them to version control.
+</Tip>
+
+<Check>
+**CI/CD setup**: Always use a custom keychain on CI/CD systems to avoid conflicts.
+</Check>
+
+## Troubleshooting
+
+### Certificate limit reached
+
+Apple limits the number of certificates. Revoke old ones:
+
+```bash
+fastlane cert revoke_expired
+```
+
+### Certificate not found in keychain
+
+Make sure the certificate was imported correctly:
+
+```bash
+security find-identity -v -p codesigning
+```
+
+### Wrong team selected
+
+Specify the team explicitly:
+
+```ruby
+cert(team_id: "Q2CBPJ58CA")
+```
+
+### Permission denied on CI
+
+Unlock the keychain first:
+
+```ruby
+unlock_keychain(
+  path: "fastlane_keychain",
+  password: ENV["KEYCHAIN_PASSWORD"]
+)
+```
+
+## Related Tools
+
+- [sigh](/tools/sigh) - Manage provisioning profiles
+- [match](/tools/match) - Sync certificates and profiles across team
+- [pem](/tools/pem) - Manage push notification certificates

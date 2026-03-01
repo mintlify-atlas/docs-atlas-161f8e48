@@ -1,0 +1,454 @@
+---
+title: Fastfile
+description: Learn about the Fastfile, the heart of your fastlane configuration
+---
+
+The **Fastfile** is the core configuration file for fastlane. It's where you define lanes, actions, and automation workflows for your mobile app development process. Written in Ruby, the Fastfile provides a simple DSL (Domain Specific Language) that makes it easy to automate building, testing, and releasing your apps.
+
+## What is a Fastfile?
+
+A Fastfile is a Ruby file located in the `fastlane/` directory of your project. It contains all the automation logic for your project, organized into lanes. Think of it as a recipe book for your app's build and deployment processes.
+
+<Note>
+The Fastfile is evaluated as Ruby code, which means you have access to the full power of Ruby including variables, conditionals, loops, and methods.
+</Note>
+
+## File Location
+
+The Fastfile must be located at:
+```
+YourProject/
+└── fastlane/
+    └── Fastfile
+```
+
+## Basic Structure
+
+Here's a simple Fastfile structure from the fastlane source code:
+
+```ruby
+# Simple lane definition
+lane :test do
+  scan(scheme: "MyApp")
+end
+
+# Lane with description
+desc "Build the app for release"
+lane :build do
+  gym(scheme: "MyApp", export_method: "app-store")
+end
+```
+
+## Platform-Specific Organization
+
+You can organize lanes by platform using platform blocks:
+
+```ruby
+platform :ios do
+  desc "Build iOS app"
+  lane :build do
+    gym(scheme: "MyApp-iOS")
+  end
+  
+  lane :test do
+    scan(scheme: "MyApp-iOS")
+  end
+end
+
+platform :android do
+  desc "Build Android app"
+  lane :build do
+    gradle(task: "assembleRelease")
+  end
+  
+  lane :test do
+    gradle(task: "test")
+  end
+end
+
+platform :mac do
+  desc "Build macOS app"
+  lane :build do
+    gym(scheme: "MyApp-Mac")
+  end
+end
+```
+
+<Tabs>
+  <Tab title="iOS">
+    ```ruby
+    platform :ios do
+      lane :beta do
+        build_app(scheme: "MyApp")
+        upload_to_testflight
+      end
+    end
+    ```
+  </Tab>
+  <Tab title="Android">
+    ```ruby
+    platform :android do
+      lane :beta do
+        gradle(task: "assembleRelease")
+        upload_to_play_store(track: "beta")
+      end
+    end
+    ```
+  </Tab>
+  <Tab title="Cross-platform">
+    ```ruby
+    # Lanes without a platform block work for all platforms
+    lane :setup do
+      ensure_git_status_clean
+      cocoapods
+    end
+    ```
+  </Tab>
+</Tabs>
+
+## DSL Methods
+
+The Fastfile DSL provides several key methods:
+
+### Lane Definition
+
+```ruby
+# Public lane (can be called from CLI)
+lane :deploy do
+  # lane implementation
+end
+
+# Private lane (internal use only)
+private_lane :prepare_build do
+  # lane implementation
+end
+
+# Override lane (useful when importing Fastfiles)
+override_lane :test do
+  # new implementation
+end
+```
+
+### Description
+
+Add descriptions to document your lanes:
+
+```ruby
+desc "Run all tests for the iOS app"
+lane :test do
+  scan
+end
+```
+
+### Lifecycle Hooks
+
+Fastfile supports hooks that run at specific points in your workflow:
+
+```ruby
+# Runs before all lanes in this platform
+before_all do |lane, options|
+  ensure_git_status_clean
+  cocoapods
+end
+
+# Runs before each lane
+before_each do |lane, options|
+  UI.message("Starting lane: #{lane}")
+end
+
+# Runs after all lanes complete successfully
+after_all do |lane, options|
+  notification(message: "Success!")
+end
+
+# Runs after each lane
+after_each do |lane, options|
+  UI.message("Finished lane: #{lane}")
+end
+
+# Runs when an error occurs
+error do |lane, exception, options|
+  slack(
+    message: "Error in lane #{lane}: #{exception.message}",
+    success: false
+  )
+end
+```
+
+## Shell Commands
+
+You can execute shell commands directly in your Fastfile:
+
+```ruby
+lane :version do
+  # Simple command
+  sh "git log -1 --oneline"
+  
+  # With options
+  sh(
+    command: "xcodebuild -version",
+    log: true,
+    step_name: "Check Xcode version"
+  )
+  
+  # Capture output
+  version = sh("cat VERSION.txt", log: false).strip
+end
+```
+
+## Importing Other Fastfiles
+
+You can split your configuration across multiple files:
+
+```ruby
+# Import a local Fastfile
+import "./CustomFastfile"
+
+# Import from a relative path
+import "../shared/Fastfile"
+
+# Import from a git repository
+import_from_git(
+  url: "https://github.com/company/fastlane-config.git",
+  branch: "main",
+  path: "fastlane/Fastfile"
+)
+```
+
+## Loading External Actions
+
+Load custom actions from a directory:
+
+```ruby
+# Load actions from a custom directory
+actions_path "./custom_actions"
+```
+
+## Working with Dependencies
+
+Require Ruby gems in your Fastfile:
+
+```ruby
+# Use fastlane_require to auto-install missing gems
+fastlane_require 'xcodeproj'
+fastlane_require 'colorize'
+
+# Then use the gems
+lane :example do
+  project = Xcodeproj::Project.open("MyApp.xcodeproj")
+  UI.success("Project loaded!".green)
+end
+```
+
+## Best Practices
+
+<Accordion title="Organize by Platform">
+  Use platform blocks to keep iOS, Android, and Mac lanes separate and organized. This prevents naming conflicts and makes your Fastfile easier to navigate.
+  
+  ```ruby
+  platform :ios do
+    lane :release do
+      # iOS-specific release
+    end
+  end
+  
+  platform :android do
+    lane :release do
+      # Android-specific release
+    end
+  end
+  ```
+</Accordion>
+
+<Accordion title="Use Private Lanes">
+  Extract common functionality into private lanes to keep your code DRY (Don't Repeat Yourself):
+  
+  ```ruby
+  lane :beta do
+    prepare_release
+    build_app
+    upload_to_testflight
+  end
+  
+  lane :production do
+    prepare_release
+    build_app
+    upload_to_app_store
+  end
+  
+  private_lane :prepare_release do
+    ensure_git_status_clean
+    increment_build_number
+    commit_version_bump
+  end
+  ```
+</Accordion>
+
+<Accordion title="Add Descriptions">
+  Always add descriptions to your lanes. They show up in `fastlane lanes` and serve as documentation:
+  
+  ```ruby
+  desc "Deploy a new version to the App Store"
+  desc "This will also make sure the profile is up to date"
+  lane :release do
+    # implementation
+  end
+  ```
+</Accordion>
+
+<Accordion title="Use Error Handling">
+  Implement error blocks to handle failures gracefully:
+  
+  ```ruby
+  error do |lane, exception|
+    # Clean up resources
+    reset_git_repo
+    
+    # Send notifications
+    slack(
+      message: "#{lane} failed: #{exception.message}",
+      success: false
+    )
+  end
+  ```
+</Accordion>
+
+<Accordion title="Environment Variables">
+  Use environment variables for sensitive data:
+  
+  ```ruby
+  lane :deploy do
+    api_key = ENV["APP_STORE_API_KEY"]
+    
+    upload_to_app_store(
+      api_key: api_key,
+      skip_screenshots: true
+    )
+  end
+  ```
+</Accordion>
+
+## Shared Values
+
+Actions can share values using the lane context:
+
+```ruby
+lane :build do
+  # Some actions set shared values
+  build_app(scheme: "MyApp")
+  
+  # Access the shared value
+  ipa_path = lane_context[SharedValues::IPA_OUTPUT_PATH]
+  UI.message("IPA created at: #{ipa_path}")
+end
+```
+
+## Advanced Features
+
+### Dynamic Lane Names
+
+```ruby
+%w[development staging production].each do |env|
+  lane "deploy_#{env}".to_sym do
+    # Deploy to specific environment
+    sh "deploy.sh #{env}"
+  end
+end
+```
+
+### Conditional Execution
+
+```ruby
+lane :test do
+  if Helper.ci?
+    # CI-specific behavior
+    scan(code_coverage: true)
+  else
+    # Local development behavior
+    scan(devices: ["iPhone 14"])
+  end
+end
+```
+
+<Warning>
+Be careful when using complex Ruby logic in your Fastfile. While powerful, it can make your automation harder to debug. Keep it simple when possible.
+</Warning>
+
+## Example: Real-World Fastfile
+
+Here's a production-ready example based on fastlane's own Fastfile:
+
+```ruby
+fastlane_require 'xcodeproj'
+
+skip_docs # Don't generate README.md
+
+# Runs before all lanes
+before_all do |lane|
+  ensure_git_status_clean unless lane == :test
+end
+
+# Error handling
+error do |lane, exception|
+  slack(
+    channel: "#builds",
+    message: "#{lane} failed: #{exception.message}",
+    success: false
+  )
+end
+
+platform :ios do
+  desc "Run all tests"
+  lane :test do
+    scan(
+      scheme: "MyApp",
+      devices: ["iPhone 14", "iPad Pro (12.9-inch)"]
+    )
+  end
+  
+  desc "Submit a new beta build to TestFlight"
+  lane :beta do
+    increment_build_number
+    build_app(scheme: "MyApp")
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+    
+    commit_version_bump(message: "Version Bump by fastlane")
+    push_to_git_remote
+  end
+  
+  desc "Deploy a new version to the App Store"
+  lane :release do
+    capture_screenshots
+    build_app(scheme: "MyApp")
+    upload_to_app_store(
+      submit_for_review: true,
+      automatic_release: false,
+      force: true
+    )
+  end
+end
+
+platform :android do
+  desc "Submit a new beta build to Play Console"
+  lane :beta do
+    gradle(task: "assembleRelease")
+    upload_to_play_store(
+      track: "beta",
+      skip_upload_apk: true
+    )
+  end
+end
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Lanes" icon="road" href="/concepts/lanes">
+    Learn how to define and organize lanes
+  </Card>
+  <Card title="Actions" icon="bolt" href="/concepts/actions">
+    Explore available actions and how to use them
+  </Card>
+</CardGroup>

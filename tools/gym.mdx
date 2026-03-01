@@ -1,0 +1,537 @@
+---
+title: gym
+description: Build and package iOS, macOS, tvOS, and watchOS apps
+---
+
+## Overview
+
+gym builds and packages iOS, macOS, tvOS, and watchOS applications into `.ipa` or `.pkg` files ready for distribution. It's the easiest way to automate your build process.
+
+<Info>
+gym is also available as `build_app` or `build_ios_app` actions in fastlane.
+</Info>
+
+## Installation
+
+gym is part of fastlane. Install it with:
+
+```bash
+fastlane gym
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Run gym">
+    ```bash
+    fastlane gym
+    ```
+    
+    gym will automatically detect your project and scheme.
+  </Step>
+  
+  <Step title="Find your IPA">
+    The built `.ipa` or `.pkg` file will be in the current directory.
+  </Step>
+</Steps>
+
+## CLI Commands
+
+<CodeGroup>
+
+```bash Build app
+fastlane gym
+```
+
+```bash Build specific scheme
+fastlane gym --scheme "MyApp"
+```
+
+```bash Build and clean
+fastlane gym --clean
+```
+
+```bash Export to directory
+fastlane gym --output_directory "./build"
+```
+
+```bash Initialize Gymfile
+fastlane gym init
+```
+
+</CodeGroup>
+
+## Key Options
+
+<ParamField path="workspace" type="string">
+  Path to the workspace file.
+  
+  ```ruby
+  gym(workspace: "MyApp.xcworkspace")
+  ```
+</ParamField>
+
+<ParamField path="project" type="string">
+  Path to the project file.
+  
+  ```ruby
+  gym(project: "MyApp.xcodeproj")
+  ```
+</ParamField>
+
+<ParamField path="scheme" type="string">
+  The project's scheme. Make sure it's marked as Shared.
+  
+  ```ruby
+  gym(scheme: "MyApp")
+  ```
+</ParamField>
+
+<ParamField path="clean" type="boolean" default="false">
+  Should the project be cleaned before building?
+  
+  ```ruby
+  gym(clean: true)
+  ```
+</ParamField>
+
+<ParamField path="output_directory" type="string" default=".">
+  The directory where the IPA file should be stored.
+  
+  ```ruby
+  gym(output_directory: "./build")
+  ```
+</ParamField>
+
+<ParamField path="output_name" type="string">
+  The name of the resulting IPA file.
+  
+  ```ruby
+  gym(output_name: "MyApp.ipa")
+  ```
+</ParamField>
+
+<ParamField path="configuration" type="string">
+  The configuration to use when building (defaults to 'Release').
+  
+  ```ruby
+  gym(configuration: "Debug")
+  ```
+</ParamField>
+
+<ParamField path="silent" type="boolean" default="false">
+  Hide all information that's not necessary while building.
+  
+  ```ruby
+  gym(silent: true)
+  ```
+</ParamField>
+
+<ParamField path="codesigning_identity" type="string">
+  The name of the code signing identity to use.
+  
+  ```ruby
+  gym(codesigning_identity: "iPhone Distribution: Company Inc")
+  ```
+</ParamField>
+
+<ParamField path="export_method" type="string">
+  Method used to export the archive. Valid values: app-store, validation, ad-hoc, package, enterprise, development, developer-id, mac-application.
+  
+  ```ruby
+  gym(export_method: "app-store")
+  ```
+</ParamField>
+
+<ParamField path="export_options" type="hash">
+  Path to an export options plist or a hash with export options.
+  
+  ```ruby
+  gym(
+    export_options: {
+      method: "app-store",
+      provisioningProfiles: {
+        "com.example.app" => "App Store Profile"
+      }
+    }
+  )
+  ```
+</ParamField>
+
+<ParamField path="export_xcargs" type="string">
+  Pass additional arguments to xcodebuild for the package phase.
+  
+  ```ruby
+  gym(export_xcargs: "-allowProvisioningUpdates")
+  ```
+</ParamField>
+
+<ParamField path="skip_build_archive" type="boolean">
+  Export IPA from previously built xcarchive.
+  
+  ```ruby
+  gym(
+    skip_build_archive: true,
+    archive_path: "./MyApp.xcarchive"
+  )
+  ```
+</ParamField>
+
+<ParamField path="skip_archive" type="boolean">
+  After building, don't archive.
+  
+  ```ruby
+  gym(skip_archive: true)
+  ```
+</ParamField>
+
+<ParamField path="skip_codesigning" type="boolean">
+  Build without codesigning.
+  
+  ```ruby
+  gym(skip_codesigning: true)
+  ```
+</ParamField>
+
+<ParamField path="include_symbols" type="boolean">
+  Should the IPA file include symbols?
+  
+  ```ruby
+  gym(include_symbols: true)
+  ```
+</ParamField>
+
+<ParamField path="include_bitcode" type="boolean">
+  Should the IPA file include bitcode?
+  
+  ```ruby
+  gym(include_bitcode: true)
+  ```
+</ParamField>
+
+<ParamField path="archive_path" type="string">
+  The path to the created archive.
+  
+  ```ruby
+  gym(archive_path: "./build/MyApp.xcarchive")
+  ```
+</ParamField>
+
+<ParamField path="derived_data_path" type="string">
+  The directory where build products will go.
+  
+  ```ruby
+  gym(derived_data_path: "./DerivedData")
+  ```
+</ParamField>
+
+<ParamField path="result_bundle" type="boolean" default="false">
+  Should an Xcode result bundle be generated?
+  
+  ```ruby
+  gym(result_bundle: true)
+  ```
+</ParamField>
+
+<ParamField path="buildlog_path" type="string">
+  The directory where to store the build log.
+  
+  ```ruby
+  gym(buildlog_path: "./logs")
+  ```
+</ParamField>
+
+<ParamField path="sdk" type="string">
+  The SDK that should be used for building.
+  
+  ```ruby
+  gym(sdk: "iphoneos")
+  ```
+</ParamField>
+
+<ParamField path="destination" type="string">
+  Use a custom destination for building the app.
+  
+  ```ruby
+  gym(destination: "generic/platform=iOS")
+  ```
+</ParamField>
+
+<ParamField path="xcargs" type="string">
+  Pass additional arguments to xcodebuild for the build phase.
+  
+  ```ruby
+  gym(xcargs: "-allowProvisioningUpdates")
+  ```
+</ParamField>
+
+<ParamField path="xcconfig" type="string">
+  Use an extra XCCONFIG file to build your app.
+  
+  ```ruby
+  gym(xcconfig: "./MyConfig.xcconfig")
+  ```
+</ParamField>
+
+<ParamField path="catalyst_platform" type="string">
+  Platform to build when using a Catalyst enabled app (ios, macos).
+  
+  ```ruby
+  gym(catalyst_platform: "macos")
+  ```
+</ParamField>
+
+## Export Methods
+
+<CodeGroup>
+
+```ruby App Store
+gym(export_method: "app-store")
+```
+
+```ruby Ad-Hoc
+gym(export_method: "ad-hoc")
+```
+
+```ruby Development
+gym(export_method: "development")
+```
+
+```ruby Enterprise
+gym(export_method: "enterprise")
+```
+
+```ruby Developer ID (macOS)
+gym(export_method: "developer-id")
+```
+
+</CodeGroup>
+
+## Using with fastlane
+
+### Basic Build
+
+```ruby
+lane :build do
+  gym(scheme: "MyApp")
+end
+```
+
+### Build for App Store
+
+```ruby
+lane :release do
+  increment_build_number
+  
+  gym(
+    scheme: "MyApp",
+    export_method: "app-store",
+    clean: true
+  )
+end
+```
+
+### Build for TestFlight
+
+```ruby
+lane :beta do
+  gym(
+    scheme: "MyApp",
+    export_method: "app-store",
+    output_directory: "./build",
+    output_name: "MyApp-Beta.ipa"
+  )
+  
+  pilot
+end
+```
+
+### Build with Custom Options
+
+```ruby
+lane :custom_build do
+  gym(
+    workspace: "MyApp.xcworkspace",
+    scheme: "MyApp",
+    configuration: "Release",
+    clean: true,
+    output_directory: "./build",
+    output_name: "MyApp-#{get_version_number}.ipa",
+    export_method: "app-store",
+    include_symbols: true,
+    export_options: {
+      uploadSymbols: true,
+      compileBitcode: true
+    }
+  )
+end
+```
+
+### Build from Archive
+
+```ruby
+lane :package do
+  gym(
+    skip_build_archive: true,
+    archive_path: "./MyApp.xcarchive",
+    export_method: "app-store"
+  )
+end
+```
+
+## Gymfile
+
+Create a `Gymfile` for persistent configuration:
+
+```ruby
+# Gymfile
+
+scheme "MyApp"
+
+clean true
+
+export_method "app-store"
+
+output_directory "./build"
+output_name "MyApp.ipa"
+
+include_symbols true
+include_bitcode true
+
+export_options({
+  uploadSymbols: true,
+  compileBitcode: true,
+  provisioningProfiles: {
+    "com.example.app" => "App Store Profile"
+  }
+})
+```
+
+Generate a template:
+
+```bash
+fastlane gym init
+```
+
+## Building for Different Platforms
+
+### iOS
+
+```ruby
+gym(
+  scheme: "MyApp",
+  sdk: "iphoneos"
+)
+```
+
+### macOS
+
+```ruby
+gym(
+  scheme: "MyApp",
+  export_method: "developer-id",
+  sdk: "macosx"
+)
+```
+
+### tvOS
+
+```ruby
+gym(
+  scheme: "MyApp-tvOS",
+  sdk: "appletvos"
+)
+```
+
+### Catalyst
+
+```ruby
+gym(
+  scheme: "MyApp",
+  catalyst_platform: "macos"
+)
+```
+
+## Environment Variables
+
+<ResponseField name="GYM_WORKSPACE" type="string">
+  Path to the workspace file
+</ResponseField>
+
+<ResponseField name="GYM_PROJECT" type="string">
+  Path to the project file
+</ResponseField>
+
+<ResponseField name="GYM_SCHEME" type="string">
+  The project's scheme
+</ResponseField>
+
+<ResponseField name="GYM_CLEAN" type="boolean">
+  Should the project be cleaned?
+</ResponseField>
+
+<ResponseField name="GYM_OUTPUT_DIRECTORY" type="string">
+  Output directory for IPA
+</ResponseField>
+
+<ResponseField name="GYM_OUTPUT_NAME" type="string">
+  Name of the resulting IPA file
+</ResponseField>
+
+<ResponseField name="GYM_CONFIGURATION" type="string">
+  Build configuration to use
+</ResponseField>
+
+<ResponseField name="GYM_EXPORT_METHOD" type="string">
+  Export method to use
+</ResponseField>
+
+## Tips & Best Practices
+
+<Tip>
+**Use Gymfile**: Store your build configuration in a Gymfile for consistency.
+</Tip>
+
+<Warning>
+**Clean builds on CI**: Always use `clean: true` on CI to ensure reproducible builds.
+</Warning>
+
+<Tip>
+**Include symbols**: Set `include_symbols: true` for better crash reporting.
+</Tip>
+
+<Check>
+**Shared scheme**: Make sure your scheme is marked as "Shared" in Xcode.
+</Check>
+
+## Troubleshooting
+
+### Scheme not found
+
+Make sure the scheme is marked as "Shared" in Xcode:
+1. Product → Scheme → Manage Schemes
+2. Check "Shared" for your scheme
+
+### Code signing error
+
+Use [match](/tools/match) for automatic code signing:
+
+```ruby
+match(type: "appstore")
+gym(export_method: "app-store")
+```
+
+### Build failed
+
+Check the build log in the buildlog_path:
+
+```ruby
+gym(buildlog_path: "./logs")
+```
+
+## Related Tools
+
+- [match](/tools/match) - Sync code signing certificates
+- [pilot](/tools/pilot) - Upload to TestFlight
+- [deliver](/tools/deliver) - Upload to App Store
+- [scan](/tools/scan) - Run tests before building

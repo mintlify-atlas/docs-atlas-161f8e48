@@ -1,0 +1,587 @@
+---
+title: GitHub Actions Integration
+description: Set up fastlane with GitHub Actions for automated iOS and macOS builds
+---
+
+## Overview
+
+GitHub Actions is GitHub's built-in CI/CD platform. It provides free macOS runners for open source projects and seamless integration with your GitHub repositories.
+
+## Quick Start
+
+Add this to your `Fastfile`:
+
+```ruby
+platform :ios do
+  before_all do
+    setup_ci if is_ci
+  end
+
+  lane :test do
+    run_tests(scheme: "MyApp")
+  end
+
+  lane :beta do
+    match(type: "appstore")
+    build_app(scheme: "MyApp")
+    upload_to_testflight
+  end
+end
+```
+
+## GitHub Actions Workflow
+
+### Basic Workflow
+
+Create `.github/workflows/ci.yml`:
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test:
+    name: Test
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+      
+      - name: Run tests
+        run: bundle exec fastlane test
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-results
+          path: fastlane/test_output
+```
+
+### Advanced Workflow with Deployment
+
+Create `.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+      
+      - name: Cache CocoaPods
+        uses: actions/cache@v6
+        with:
+          path: |
+            Pods
+            ~/.cocoapods
+          key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+      
+      - name: Install dependencies
+        run: bundle exec pod install
+      
+      - name: Run tests
+        run: bundle exec fastlane test
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-results
+          path: fastlane/test_output
+  
+  deploy:
+    name: Deploy to TestFlight
+    needs: test
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+      
+      - name: Cache CocoaPods
+        uses: actions/cache@v6
+        with:
+          path: |
+            Pods
+            ~/.cocoapods
+          key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
+      
+      - name: Install dependencies
+        run: bundle exec pod install
+      
+      - name: Deploy to TestFlight
+        env:
+          APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_KEY }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: bundle exec fastlane beta
+      
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: build-artifacts
+          path: |
+            *.ipa
+            *.dSYM.zip
+```
+
+### Multi-Platform Testing
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }} with Xcode ${{ matrix.xcode }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            xcode: '16.3'
+          - os: macos-14
+            xcode: '16.4'
+          - os: macos-15
+            xcode: '16.4'
+    
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+      
+      - name: Run tests
+        run: bundle exec fastlane test
+```
+
+### Pull Request Workflow
+
+```yaml
+name: PR Checks
+
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: macos-14
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+      
+      - name: Run tests
+        run: bundle exec fastlane test
+      
+      - name: Comment PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const testResults = 'Tests completed!';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: testResults
+            });
+```
+
+## Secrets Configuration
+
+### Setting Up Secrets
+
+<Steps>
+  <Step title="Navigate to Repository Settings">
+    Go to your repository on GitHub → **Settings** → **Secrets and variables** → **Actions**
+  </Step>
+  
+  <Step title="Add Repository Secrets">
+    Click **New repository secret** and add:
+    
+    **App Store Connect API Key (Recommended):**
+    - `APP_STORE_CONNECT_API_KEY_KEY_ID`
+    - `APP_STORE_CONNECT_API_KEY_ISSUER_ID`
+    - `APP_STORE_CONNECT_API_KEY_KEY`
+    
+    **Match:**
+    - `MATCH_PASSWORD`
+    - `MATCH_GIT_BASIC_AUTHORIZATION` (base64 encoded `username:token`)
+    
+    **Apple ID (Legacy):**
+    - `FASTLANE_USER`
+    - `FASTLANE_PASSWORD`
+    - `FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD`
+  </Step>
+  
+  <Step title="Use Secrets in Workflow">
+    Reference secrets in your workflow:
+    
+    ```yaml
+    env:
+      APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_KEY_ID }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+    ```
+  </Step>
+</Steps>
+
+### Creating App Store Connect API Key
+
+<Steps>
+  <Step title="Generate API Key">
+    1. Go to [App Store Connect](https://appstoreconnect.apple.com)
+    2. Navigate to **Users and Access** → **Keys**
+    3. Click **+** to create a new key
+    4. Download the `.p8` file
+  </Step>
+  
+  <Step title="Add to GitHub Secrets">
+    ```bash
+    # Get the key content
+    cat AuthKey_ABC123.p8
+    
+    # Copy the entire content including header/footer and add as secret
+    # APP_STORE_CONNECT_API_KEY_KEY
+    ```
+  </Step>
+  
+  <Step title="Add Key ID and Issuer ID">
+    - `APP_STORE_CONNECT_API_KEY_KEY_ID`: Key ID (e.g., ABC123)
+    - `APP_STORE_CONNECT_API_KEY_ISSUER_ID`: Issuer ID (UUID format)
+  </Step>
+</Steps>
+
+### Match Git Authorization
+
+To access your match repository:
+
+```bash
+# Create a Personal Access Token (PAT) with repo access
+# Then encode it:
+echo -n "username:ghp_yourtoken" | base64
+
+# Add as MATCH_GIT_BASIC_AUTHORIZATION secret
+```
+
+Or use SSH:
+
+```yaml
+- name: Set up SSH for Match
+  uses: webfactory/ssh-agent@v0.8.0
+  with:
+    ssh-private-key: ${{ secrets.MATCH_DEPLOY_KEY }}
+```
+
+## Environment Variables
+
+### GitHub Actions Built-in Variables
+
+```bash
+GITHUB_ACTION=true               # Running in GitHub Actions
+CI=true                          # Generic CI indicator
+GITHUB_ACTIONS=true              # GitHub Actions specific
+GITHUB_REF=refs/heads/main       # Git ref
+GITHUB_SHA=abc123...             # Commit SHA
+GITHUB_REPOSITORY=user/repo      # Repository
+GITHUB_ACTOR=username            # User who triggered
+GITHUB_RUN_NUMBER=42             # Workflow run number
+GITHUB_WORKFLOW=CI               # Workflow name
+RUNNER_OS=macOS                  # Runner OS
+RUNNER_TEMP=/tmp                 # Temp directory
+```
+
+### Using in Fastfile
+
+```ruby
+lane :beta do
+  # Use GitHub run number as build number
+  increment_build_number(
+    build_number: ENV['GITHUB_RUN_NUMBER']
+  )
+  
+  # Tag with commit SHA
+  tag = "beta-#{ENV['GITHUB_SHA'][0..6]}"
+  
+  build_app(scheme: "MyApp")
+  upload_to_testflight
+end
+```
+
+### Setting Custom Environment Variables
+
+```yaml
+env:
+  # Global environment variables
+  FASTLANE_SKIP_UPDATE_CHECK: 1
+  FASTLANE_HIDE_CHANGELOG: 1
+  FL_OUTPUT_DIR: output
+
+jobs:
+  deploy:
+    env:
+      # Job-specific variables
+      MATCH_READONLY: true
+    
+    steps:
+      - name: Deploy
+        env:
+          # Step-specific variables
+          FASTLANE_LANE: beta
+        run: bundle exec fastlane $FASTLANE_LANE
+```
+
+## Example Fastfile
+
+```ruby
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    setup_ci if is_ci
+  end
+
+  desc "Run tests"
+  lane :test do
+    run_tests(
+      scheme: "MyApp",
+      devices: ["iPhone 15"],
+      code_coverage: true,
+      result_bundle: true
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    # Check if running on GitHub Actions
+    unless ENV['GITHUB_ACTIONS']
+      UI.user_error!("This lane should only run on GitHub Actions")
+    end
+    
+    # Sync certificates
+    match(
+      type: "appstore",
+      readonly: is_ci,
+      git_basic_authorization: ENV['MATCH_GIT_BASIC_AUTHORIZATION']
+    )
+    
+    # Use GitHub run number
+    increment_build_number(
+      build_number: ENV['GITHUB_RUN_NUMBER']
+    )
+    
+    # Build
+    build_app(
+      scheme: "MyApp",
+      export_method: "app-store",
+      output_directory: "./output",
+      output_name: "MyApp.ipa"
+    )
+    
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      changelog: "Build #{ENV['GITHUB_RUN_NUMBER']} from #{ENV['GITHUB_SHA'][0..6]}"
+    )
+  end
+
+  desc "Deploy to App Store"
+  lane :release do
+    match(type: "appstore", readonly: is_ci)
+    
+    build_app(
+      scheme: "MyApp",
+      export_method: "app-store"
+    )
+    
+    upload_to_app_store(
+      submit_for_review: false,
+      automatic_release: false
+    )
+  end
+
+  after_all do |lane|
+    clean_build_artifacts if is_ci
+  end
+
+  error do |lane, exception|
+    puts "Error in lane #{lane}: #{exception}"
+  end
+end
+```
+
+## Best Practices
+
+### 1. Use Caching
+
+Cache dependencies to speed up workflows:
+
+```yaml
+- name: Cache gems
+  uses: actions/cache@v6
+  with:
+    path: vendor/bundle
+    key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
+
+- name: Cache CocoaPods
+  uses: actions/cache@v6
+  with:
+    path: Pods
+    key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
+```
+
+### 2. Use Concurrency Controls
+
+Prevent duplicate runs:
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+```
+
+### 3. Select Appropriate Runners
+
+```yaml
+# macOS 14 (latest)
+runs-on: macos-14
+
+# macOS 15 (newest)
+runs-on: macos-15
+
+# Specific version
+runs-on: macos-14-xlarge  # Larger runner
+```
+
+### 4. Use Matrix Builds
+
+Test across multiple configurations:
+
+```yaml
+strategy:
+  matrix:
+    xcode: ['16.3', '16.4']
+    scheme: ['MyApp', 'MyAppTests']
+```
+
+### 5. Conditional Execution
+
+```yaml
+- name: Deploy
+  if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  run: bundle exec fastlane beta
+```
+
+## Common Issues
+
+### Keychain Errors
+
+**Problem:** `User interaction is not allowed`
+
+**Solution:** Ensure `setup_ci` is called:
+
+```ruby
+before_all do
+  setup_ci
+end
+```
+
+### Match Authentication
+
+**Problem:** Can't access match repository
+
+**Solution:** Use SSH key or HTTPS with PAT:
+
+```yaml
+- uses: webfactory/ssh-agent@v0.8.0
+  with:
+    ssh-private-key: ${{ secrets.MATCH_DEPLOY_KEY }}
+```
+
+### Xcode Version
+
+**Problem:** Wrong Xcode version
+
+**Solution:** Set `DEVELOPER_DIR`:
+
+```yaml
+env:
+  DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+```
+
+### Timeout
+
+**Problem:** Job times out after 6 hours
+
+**Solution:** Optimize build or use self-hosted runner
+
+## Related Actions
+
+- [setup_ci](/actions/setup_ci) - Generic CI setup
+- [match](/actions/match) - Code signing management
+- [is_ci](/actions/is_ci) - Detect CI environment

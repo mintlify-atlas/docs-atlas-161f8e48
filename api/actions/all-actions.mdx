@@ -1,0 +1,456 @@
+---
+title: "All Built-in Actions"
+description: "Complete reference of all fastlane actions"
+---
+
+This page provides a comprehensive list of all built-in fastlane actions, organized by category.
+
+## Overview
+
+Fastlane includes over 200 built-in actions covering every aspect of mobile app development and deployment. Each action is designed to handle a specific task and can be easily integrated into your lanes.
+
+## How to Use This Reference
+
+Each action listed includes:
+- **Name**: The action name to use in your Fastfile
+- **Category**: Functional category
+- **Description**: Brief description of what the action does
+- **Source**: Link to the source code
+
+For detailed documentation on each action, visit [fastlane.tools/actions](https://docs.fastlane.tools/actions/).
+
+## Categories
+
+<CardGroup cols={3}>
+  <Card title="Testing" icon="vial">
+    Run tests and generate coverage reports
+  </Card>
+  <Card title="Building" icon="hammer">
+    Build and compile your applications
+  </Card>
+  <Card title="Code Signing" icon="key">
+    Manage certificates and provisioning profiles
+  </Card>
+  <Card title="Beta Deployment" icon="rocket">
+    Deploy to beta testing platforms
+  </Card>
+  <Card title="Production" icon="store">
+    Release to app stores
+  </Card>
+  <Card title="Screenshots" icon="camera">
+    Automate screenshot generation
+  </Card>
+</CardGroup>
+
+---
+
+## Testing Actions
+
+Actions for running tests and generating coverage reports.
+
+| Action | Description |
+|--------|-------------|
+| `run_tests` (scan) | Run tests for iOS/macOS apps |
+| `scan` | Alias for run_tests |
+| `appium` | Run UI tests with Appium |
+| `lcov` | Generate coverage data using lcov |
+| `gcovr` | Generate coverage reports for Xcode projects |
+| `slather` | Generate code coverage reports |
+| `xcov` | Generate code coverage reports without hassle |
+| `trainer` | Convert Xcode plist logs to JUnit reports |
+| `verify_build` | Verify various settings in ipa file |
+
+---
+
+## Building Actions
+
+Actions for building and compiling applications.
+
+| Action | Description |
+|--------|-------------|
+| `build_app` (gym) | Build and sign your iOS/macOS app |
+| `gym` | Alias for build_app |
+| `build_ios_app` | Alias for build_app (iOS only) |
+| `build_mac_app` | Alias for build_app (macOS only) |
+| `build_android_app` | Build Android app using Gradle |
+| `gradle` | Run gradle tasks for Android |
+| `xcodebuild` | Use xcodebuild command directly |
+| `xcversion` | Select Xcode version to use |
+| `xcode_select` | Change xcode-path to use |
+| `carthage` | Run Carthage for dependency management |
+| `cocoapods` | Run pod install |
+| `spm` | Run Swift Package Manager |
+| `ipa` | Build and sign using shenzhen (deprecated) |
+
+---
+
+## Code Signing Actions
+
+Manage certificates, provisioning profiles, and code signing.
+
+| Action | Description |
+|--------|-------------|
+| `match` (sync_code_signing) | Sync code signing across team |
+| `cert` (get_certificates) | Create new code signing certificates |
+| `sigh` (get_provisioning_profile) | Generate provisioning profiles |
+| `pem` (get_push_certificate) | Manage push notification certificates |
+| `import_certificate` | Import certificate into keychain |
+| `install_provisioning_profile` | Install provisioning profile |
+| `create_keychain` | Create a new keychain |
+| `delete_keychain` | Delete a keychain |
+| `unlock_keychain` | Unlock a keychain |
+| `automatic_code_signing` | Configure Xcode code signing options |
+| `update_code_signing_settings` | Update code signing settings |
+| `update_project_provisioning` | Update project provisioning profile |
+| `update_project_code_signing` | Update code signing from Automatic to manual |
+| `update_project_team` | Update Xcode Development Team ID |
+| `resign` | Re-codesign an existing ipa file |
+
+---
+
+## Beta Deployment Actions
+
+Deploy builds to beta testing services.
+
+| Action | Description |
+|--------|-------------|
+| `upload_to_testflight` (pilot) | Upload to TestFlight |
+| `pilot` | Alias for upload_to_testflight |
+| `testflight` | Alias for upload_to_testflight |
+| `upload_to_play_store_internal_app_sharing` | Upload to Google Play Internal App Sharing |
+| `appetize` | Upload to Appetize.io |
+| `build_and_upload_to_appetize` | Build and upload to Appetize.io |
+| `appetize_viewing_url_generator` | Generate Appetize viewing URL |
+| `appaloosa` | Upload to Appaloosa Store |
+| `deploygate` | Upload to DeployGate |
+| `hockey` | Upload to HockeyApp (deprecated, use App Center) |
+| `installr` | Upload to Installr |
+| `testfairy` | Upload to TestFairy |
+| `tryouts` | Upload to Tryouts |
+
+---
+
+## Production Actions
+
+Release to production app stores.
+
+| Action | Description |
+|--------|-------------|
+| `upload_to_app_store` (deliver) | Upload to App Store Connect |
+| `deliver` | Alias for upload_to_app_store |
+| `appstore` | Alias for upload_to_app_store |
+| `upload_to_play_store` (supply) | Upload to Google Play Store |
+| `supply` | Alias for upload_to_play_store |
+| `precheck` (check_app_store_metadata) | Validate App Store metadata |
+| `app_store_build_number` | Get current build number from App Store |
+| `latest_testflight_build_number` | Get most recent TestFlight build number |
+| `google_play_track_version_codes` | Get version codes for Play Store track |
+| `google_play_track_release_names` | Get release names for Play Store track |
+| `download_from_play_store` | Download metadata from Google Play |
+| `download_universal_apk_from_google_play` | Download Universal APK from Play Store |
+
+---
+
+## Screenshots Actions
+
+Automate screenshot generation.
+
+| Action | Description |
+|--------|-------------|
+| `capture_ios_screenshots` (snapshot) | Generate iOS screenshots |
+| `snapshot` | Alias for capture_ios_screenshots |
+| `capture_screenshots` | Alias for capture_ios_screenshots |
+| `capture_android_screenshots` (screengrab) | Generate Android screenshots |
+| `screengrab` | Alias for capture_android_screenshots |
+| `frame_screenshots` (frameit) | Add device frames to screenshots |
+| `frameit` | Alias for frame_screenshots |
+
+---
+
+## Source Control Actions
+
+Git and version control operations.
+
+| Action | Description |
+|--------|-------------|
+| `git_add` | Stage files with git add |
+| `git_commit` | Commit files with git commit |
+| `git_pull` | Pull from remote repository |
+| `git_branch` | Get current git branch name |
+| `git_remote_branch` | Get remote default branch name |
+| `git_tag_exists` | Check if git tag exists |
+| `git_submodule_update` | Update git submodules |
+| `add_git_tag` | Add annotated git tag |
+| `push_git_tags` | Push tags to remote |
+| `push_to_git_remote` | Push changes to remote |
+| `ensure_git_branch` | Ensure on specific branch |
+| `ensure_git_status_clean` | Ensure no uncommitted changes |
+| `reset_git_repo` | Reset git repo to clean state |
+| `last_git_commit` | Get last git commit info |
+| `last_git_tag` | Get most recent git tag |
+| `changelog_from_git_commits` | Generate changelog from commits |
+| `number_of_commits` | Count commits in current branch |
+| `commit_version_bump` | Commit version bump |
+| `commit_github_file` | Commit file directly via GitHub API |
+| `create_pull_request` | Create GitHub pull request |
+| `get_github_release` | Verify GitHub release version |
+| `set_github_release` | Create GitHub release |
+| `github_api` | Call GitHub API |
+
+---
+
+## Project Configuration Actions
+
+Manage project settings and configuration.
+
+| Action | Description |
+|--------|-------------|
+| `increment_build_number` | Increment build number |
+| `increment_version_number` | Increment version number |
+| `get_build_number` | Get current build number |
+| `get_version_number` | Get current version number |
+| `get_info_plist_value` | Read value from Info.plist |
+| `set_info_plist_value` | Write value to Info.plist |
+| `update_info_plist` | Update Info.plist values |
+| `update_plist` | Update any plist file |
+| `get_ipa_info_plist_value` | Read Info.plist from ipa |
+| `update_app_identifier` | Update bundle identifier |
+| `update_app_group_identifiers` | Update app group identifiers |
+| `update_icloud_container_identifiers` | Update iCloud container identifiers |
+| `update_keychain_access_groups` | Update keychain access groups |
+| `update_url_schemes` | Update URL schemes |
+| `update_urban_airship_configuration` | Update Urban Airship config |
+| `recreate_schemes` | Recreate Xcode schemes |
+| `modify_services` | Modify app services on Developer Portal |
+
+---
+
+## App Store Connect Actions
+
+Interact with App Store Connect.
+
+| Action | Description |
+|--------|-------------|
+| `app_store_connect_api_key` | Load App Store Connect API token |
+| `create_app_online` (produce) | Create app on App Store Connect |
+| `produce` | Alias for create_app_online |
+| `download_dsyms` | Download dSYM files |
+| `download_app_privacy_details_from_app_store` | Download app privacy details |
+| `upload_app_privacy_details_to_app_store` | Upload app privacy details |
+| `register_device` | Register single device |
+| `register_devices` | Register multiple devices |
+
+---
+
+## Notification Actions
+
+Send notifications and alerts.
+
+| Action | Description |
+|--------|-------------|
+| `slack` | Send message to Slack |
+| `notification` | Display macOS notification |
+| `notify` | Display macOS notification (deprecated) |
+| `chatwork` | Send message to ChatWork |
+| `flock` | Send message to Flock |
+| `ifttt` | Trigger IFTTT Maker Channel |
+| `mailgun` | Send email via Mailgun |
+| `twitter` | Post tweet to Twitter |
+| `typetalk` | Send message to Typetalk |
+
+---
+
+## Documentation Actions
+
+Generate documentation for your projects.
+
+| Action | Description |
+|--------|-------------|
+| `appledoc` | Generate Apple-style documentation |
+| `jazzy` | Generate docs using Jazzy |
+| `sourcedocs` | Generate docs using SourceDocs |
+
+---
+
+## Utility Actions
+
+General utility and helper actions.
+
+| Action | Description |
+|--------|-------------|
+| `sh` | Run shell command |
+| `puts` | Print output |
+| `println` | Alias for puts |
+| `echo` | Alias for puts |
+| `say` | Speak text out loud |
+| `prompt` | Prompt user for input |
+| `debug` | Print lane context values |
+| `lane_context` | Access lane context |
+| `import` | Import another Fastfile |
+| `import_from_git` | Import Fastfile from git |
+| `is_ci` | Check if running on CI |
+| `clipboard` | Copy to clipboard (macOS only) |
+| `rocket` | Display rocket ASCII art |
+| `environment_variable` | Get/set environment variables |
+
+---
+
+## Validation Actions
+
+Validate environment and configuration.
+
+| Action | Description |
+|--------|-------------|
+| `ensure_bundle_exec` | Ensure using bundle exec |
+| `ensure_env_vars` | Ensure env vars are set |
+| `ensure_no_debug_code` | Ensure no debug code in codebase |
+| `ensure_xcode_version` | Ensure correct Xcode version |
+| `verify_xcode` | Verify Xcode installation |
+| `verify_pod_keys` | Verify CocoaPods keys |
+| `validate_play_store_json_key` | Validate Play Store JSON key |
+| `min_fastlane_version` | Ensure minimum fastlane version |
+| `fastlane_version` | Alias for min_fastlane_version |
+| `ruby_version` | Ensure minimum Ruby version |
+
+---
+
+## CI/CD Actions
+
+Configure CI/CD environments.
+
+| Action | Description |
+|--------|-------------|
+| `setup_ci` | Setup for CI environment |
+| `setup_circle_ci` | Setup for CircleCI |
+| `setup_jenkins` | Setup for Jenkins |
+| `setup_travis` | Setup for Travis CI |
+
+---
+
+## File Operations
+
+Manage files and artifacts.
+
+| Action | Description |
+|--------|-------------|
+| `backup_file` | Backup a file |
+| `restore_file` | Restore backed up file |
+| `backup_xcarchive` | Backup xcarchive |
+| `copy_artifacts` | Copy build artifacts |
+| `clean_build_artifacts` | Delete build artifacts |
+| `clear_derived_data` | Clear Xcode derived data |
+| `clean_cocoapods_cache` | Clear CocoaPods cache |
+| `download` | Download file from URL |
+| `zip` | Compress file or folder |
+| `dsym_zip` | Create zipped dSYM |
+| `erb` | Generate files from ERB templates |
+
+---
+
+## Miscellaneous Actions
+
+| Action | Description |
+|--------|-------------|
+| `default_platform` | Set default platform |
+| `bundle_install` | Run bundle install |
+| `pod_lib_lint` | Lint CocoaPods spec |
+| `pod_push` | Push Podspec to trunk |
+| `read_podspec` | Read CocoaPods spec as JSON |
+| `version_bump_podspec` | Bump version in podspec |
+| `version_get_podspec` | Get version from podspec |
+| `set_pod_key` | Set CocoaPods key |
+| `badge` | Add badge to app icon |
+| `cloc` | Generate code count for Jenkins |
+| `oclint` | Run OCLint |
+| `sonar` | Run SonarQube analysis |
+| `swiftlint` | Run SwiftLint |
+| `danger` | Run Danger |
+| `jira` | Comment on JIRA ticket |
+| `podio_item` | Create/update Podio item |
+| `opt_out_usage` | Opt out of usage statistics |
+| `opt_out_crash_reporting` | Opt out of crash reporting |
+| `skip_docs` | Skip documentation generation |
+| `update_fastlane` | Update fastlane tools |
+| `spaceship_logs` | Find and print Spaceship logs |
+| `spaceship_stats` | Print Spaceship session stats |
+
+---
+
+## Android-Specific Actions
+
+| Action | Description |
+|--------|-------------|
+| `adb` | Run ADB commands |
+| `adb_devices` | Get connected Android devices |
+| `create_app_on_managed_play_store` | Create app on Managed Play Store |
+| `get_managed_play_store_publishing_rights` | Get Managed Play Store publishing rights |
+
+---
+
+## Upload to Services
+
+Upload dSYMs and other artifacts to third-party services.
+
+| Action | Description |
+|--------|-------------|
+| `upload_symbols_to_crashlytics` | Upload dSYMs to Crashlytics |
+| `upload_symbols_to_sentry` | Upload dSYMs to Sentry |
+| `apteligent` | Upload dSYMs to Apteligent |
+| `splunkmint` | Upload dSYMs to Splunk MINT |
+| `artifactory` | Upload to Artifactory |
+| `nexus_upload` | Upload to Sonatype Nexus |
+| `s3` | Upload to AWS S3 |
+
+---
+
+## Installation Actions
+
+| Action | Description |
+|--------|-------------|
+| `install_on_device` | Install ipa on connected device |
+| `install_xcode_plugin` | Install Xcode plugin |
+| `xcode_install` | Install specific Xcode version |
+| `xcodes` | Install Xcode if needed |
+
+---
+
+## macOS-Specific Actions
+
+| Action | Description |
+|--------|-------------|
+| `notarize` | Notarize macOS app |
+| `create_xcframework` | Create XCFramework |
+
+---
+
+## Deprecated Actions
+
+These actions are deprecated and should not be used in new projects.
+
+| Action | Description | Replacement |
+|--------|-------------|-------------|
+| `hockey` | Upload to HockeyApp | Use App Center plugin |
+| `ipa` | Build using shenzhen | Use `build_app` |
+| `notify` | macOS notification | Use `notification` |
+| `xctool` | Use xctool | Use `xcodebuild` or `scan` |
+
+---
+
+## Finding More Information
+
+For detailed documentation on each action:
+
+1. Visit [docs.fastlane.tools/actions](https://docs.fastlane.tools/actions/)
+2. Run `fastlane actions` to list all actions
+3. Run `fastlane action [action_name]` for specific action details
+4. Browse the [source code on GitHub](https://github.com/fastlane/fastlane/tree/master/fastlane/lib/fastlane/actions)
+
+## Creating Custom Actions
+
+If you need functionality not provided by built-in actions, you can create custom actions:
+
+```bash
+fastlane new_action
+```
+
+See the [Action API Reference](/api/action) for details on creating custom actions.

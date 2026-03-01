@@ -1,0 +1,603 @@
+---
+title: scan
+description: Run tests for iOS, macOS, tvOS, and watchOS apps with ease
+---
+
+## Overview
+
+scan is the easiest way to run tests for your iOS, macOS, tvOS, and watchOS apps. It automatically handles building and testing your app, generating beautiful HTML reports.
+
+<Info>
+scan is also available as the `run_tests` action in fastlane.
+</Info>
+
+## Installation
+
+scan is part of fastlane. Install it with:
+
+```bash
+fastlane scan
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Run tests">
+    ```bash
+    fastlane scan
+    ```
+    
+    scan will automatically detect your project and run tests.
+  </Step>
+  
+  <Step title="View results">
+    Test results are saved in `./test_output` directory.
+  </Step>
+</Steps>
+
+## CLI Commands
+
+<CodeGroup>
+
+```bash Run tests
+fastlane scan
+```
+
+```bash Run specific scheme
+fastlane scan --scheme "MyApp"
+```
+
+```bash Run on specific device
+fastlane scan --device "iPhone 15"
+```
+
+```bash Initialize Scanfile
+fastlane scan init
+```
+
+</CodeGroup>
+
+## Key Options
+
+<ParamField path="workspace" type="string">
+  Path to the workspace file.
+  
+  ```ruby
+  scan(workspace: "MyApp.xcworkspace")
+  ```
+</ParamField>
+
+<ParamField path="project" type="string">
+  Path to the project file.
+  
+  ```ruby
+  scan(project: "MyApp.xcodeproj")
+  ```
+</ParamField>
+
+<ParamField path="scheme" type="string">
+  The project's scheme. Make sure it's marked as Shared.
+  
+  ```ruby
+  scan(scheme: "MyApp")
+  ```
+</ParamField>
+
+<ParamField path="device" type="string">
+  The name of the simulator to run tests on.
+  
+  ```ruby
+  scan(device: "iPhone 15")
+  ```
+</ParamField>
+
+<ParamField path="devices" type="array">
+  Array of devices to run tests on.
+  
+  ```ruby
+  scan(devices: [
+    "iPhone 15",
+    "iPad Pro (12.9-inch)"
+  ])
+  ```
+</ParamField>
+
+<ParamField path="clean" type="boolean" default="false">
+  Should the project be cleaned before building?
+  
+  ```ruby
+  scan(clean: true)
+  ```
+</ParamField>
+
+<ParamField path="code_coverage" type="boolean">
+  Should code coverage be generated?
+  
+  ```ruby
+  scan(code_coverage: true)
+  ```
+</ParamField>
+
+<ParamField path="output_directory" type="string">
+  The directory where reports will be stored.
+  
+  ```ruby
+  scan(output_directory: "./test_output")
+  ```
+</ParamField>
+
+<ParamField path="output_types" type="string" default="html,junit">
+  Comma-separated list of output types (html, junit, json-compilation-database).
+  
+  ```ruby
+  scan(output_types: "html,junit")
+  ```
+</ParamField>
+
+<ParamField path="output_files" type="string">
+  Comma-separated list of output file names.
+  
+  ```ruby
+  scan(output_files: "report.html,report.junit")
+  ```
+</ParamField>
+
+<ParamField path="buildlog_path" type="string">
+  The directory where build logs will be stored.
+  
+  ```ruby
+  scan(buildlog_path: "./logs")
+  ```
+</ParamField>
+
+<ParamField path="open_report" type="boolean" default="false">
+  Should the HTML report be opened when tests complete?
+  
+  ```ruby
+  scan(open_report: true)
+  ```
+</ParamField>
+
+<ParamField path="configuration" type="string">
+  The configuration to use when building (defaults to 'Release').
+  
+  ```ruby
+  scan(configuration: "Debug")
+  ```
+</ParamField>
+
+<ParamField path="xcargs" type="string">
+  Pass additional arguments to xcodebuild.
+  
+  ```ruby
+  scan(xcargs: "-parallel-testing-enabled YES")
+  ```
+</ParamField>
+
+<ParamField path="only_testing" type="array">
+  Array of test identifiers to run.
+  
+  ```ruby
+  scan(only_testing: [
+    "MyAppTests/LoginTests",
+    "MyAppTests/SignupTests"
+  ])
+  ```
+</ParamField>
+
+<ParamField path="skip_testing" type="array">
+  Array of test identifiers to skip.
+  
+  ```ruby
+  scan(skip_testing: [
+    "MyAppTests/SlowTests"
+  ])
+  ```
+</ParamField>
+
+<ParamField path="testplan" type="string">
+  The testplan associated with the scheme to use for testing.
+  
+  ```ruby
+  scan(testplan: "MyTestPlan")
+  ```
+</ParamField>
+
+<ParamField path="skip_build" type="boolean" default="false">
+  Should the build be skipped before testing?
+  
+  ```ruby
+  scan(skip_build: true)
+  ```
+</ParamField>
+
+<ParamField path="test_without_building" type="boolean">
+  Test without building (requires derived_data_path).
+  
+  ```ruby
+  scan(
+    test_without_building: true,
+    derived_data_path: "./DerivedData"
+  )
+  ```
+</ParamField>
+
+<ParamField path="build_for_testing" type="boolean">
+  Build for testing only, does not run tests.
+  
+  ```ruby
+  scan(build_for_testing: true)
+  ```
+</ParamField>
+
+<ParamField path="derived_data_path" type="string">
+  The directory where build products will go.
+  
+  ```ruby
+  scan(derived_data_path: "./DerivedData")
+  ```
+</ParamField>
+
+<ParamField path="result_bundle" type="boolean" default="false">
+  Should an Xcode result bundle be generated?
+  
+  ```ruby
+  scan(result_bundle: true)
+  ```
+</ParamField>
+
+<ParamField path="parallel_testing" type="boolean">
+  Optionally override parallel testing setting.
+  
+  ```ruby
+  scan(parallel_testing: true)
+  ```
+</ParamField>
+
+<ParamField path="concurrent_workers" type="integer">
+  Specify the exact number of test runners.
+  
+  ```ruby
+  scan(concurrent_workers: 4)
+  ```
+</ParamField>
+
+<ParamField path="max_concurrent_simulators" type="integer">
+  Constrain number of simulators to test concurrently.
+  
+  ```ruby
+  scan(max_concurrent_simulators: 2)
+  ```
+</ParamField>
+
+<ParamField path="disable_concurrent_testing" type="boolean" default="false">
+  Do not run test bundles in parallel.
+  
+  ```ruby
+  scan(disable_concurrent_testing: true)
+  ```
+</ParamField>
+
+<ParamField path="reset_simulator" type="boolean" default="false">
+  Erase the simulator before running.
+  
+  ```ruby
+  scan(reset_simulator: true)
+  ```
+</ParamField>
+
+<ParamField path="reinstall_app" type="boolean" default="false">
+  Uninstall the app before running.
+  
+  ```ruby
+  scan(reinstall_app: true)
+  ```
+</ParamField>
+
+<ParamField path="fail_build" type="boolean" default="true">
+  Should this step stop the build if tests fail?
+  
+  ```ruby
+  scan(fail_build: false)
+  ```
+</ParamField>
+
+<ParamField path="slack_url" type="string">
+  Create an Incoming WebHook to post results to Slack.
+  
+  ```ruby
+  scan(slack_url: "https://hooks.slack.com/...")
+  ```
+</ParamField>
+
+<ParamField path="slack_channel" type="string">
+  #channel or @username for Slack.
+  
+  ```ruby
+  scan(
+    slack_url: "https://hooks.slack.com/...",
+    slack_channel: "#ios-tests"
+  )
+  ```
+</ParamField>
+
+<ParamField path="slack_only_on_failure" type="boolean" default="false">
+  Only post on Slack if tests fail.
+  
+  ```ruby
+  scan(slack_only_on_failure: true)
+  ```
+</ParamField>
+
+## Output Formats
+
+<CodeGroup>
+
+```ruby HTML Report
+scan(output_types: "html")
+```
+
+```ruby JUnit XML
+scan(output_types: "junit")
+```
+
+```ruby JSON Compilation Database
+scan(output_types: "json-compilation-database")
+```
+
+```ruby Multiple Formats
+scan(output_types: "html,junit")
+```
+
+</CodeGroup>
+
+## Using with fastlane
+
+### Basic Testing
+
+```ruby
+lane :test do
+  scan(scheme: "MyApp")
+end
+```
+
+### Testing with Code Coverage
+
+```ruby
+lane :test do
+  scan(
+    scheme: "MyApp",
+    code_coverage: true,
+    open_report: true
+  )
+end
+```
+
+### Test Multiple Devices
+
+```ruby
+lane :test_all do
+  scan(
+    scheme: "MyApp",
+    devices: [
+      "iPhone 15",
+      "iPhone 15 Pro Max",
+      "iPad Pro (12.9-inch)"
+    ]
+  )
+end
+```
+
+### Run Specific Tests
+
+```ruby
+lane :test_login do
+  scan(
+    scheme: "MyApp",
+    only_testing: [
+      "MyAppTests/LoginTests",
+      "MyAppTests/AuthenticationTests"
+    ]
+  )
+end
+```
+
+### Skip Slow Tests
+
+```ruby
+lane :test_fast do
+  scan(
+    scheme: "MyApp",
+    skip_testing: [
+      "MyAppTests/IntegrationTests",
+      "MyAppUITests"
+    ]
+  )
+end
+```
+
+### CI Testing
+
+```ruby
+lane :ci_test do
+  scan(
+    scheme: "MyApp",
+    device: "iPhone 15",
+    clean: true,
+    code_coverage: true,
+    output_types: "html,junit",
+    output_directory: "./test_output",
+    buildlog_path: "./logs",
+    fail_build: true
+  )
+end
+```
+
+### Build and Test Separately
+
+```ruby
+lane :build_and_test do
+  # Build for testing
+  scan(
+    scheme: "MyApp",
+    build_for_testing: true
+  )
+  
+  # Run tests later
+  scan(
+    scheme: "MyApp",
+    test_without_building: true,
+    derived_data_path: "./DerivedData"
+  )
+end
+```
+
+## Scanfile
+
+Create a `Scanfile` for persistent configuration:
+
+```ruby
+# Scanfile
+
+scheme "MyApp"
+
+devices [
+  "iPhone 15",
+  "iPad Pro (12.9-inch)"
+]
+
+clean true
+code_coverage true
+
+output_directory "./test_output"
+output_types "html,junit"
+
+open_report false
+
+slack_url "https://hooks.slack.com/..."
+slack_channel "#ios-tests"
+slack_only_on_failure true
+```
+
+Generate a template:
+
+```bash
+fastlane scan init
+```
+
+## Parallel Testing
+
+### Enable Parallel Testing
+
+```ruby
+scan(
+  scheme: "MyApp",
+  parallel_testing: true,
+  concurrent_workers: 4
+)
+```
+
+### Limit Concurrent Simulators
+
+```ruby
+scan(
+  scheme: "MyApp",
+  parallel_testing: true,
+  max_concurrent_simulators: 2
+)
+```
+
+## Environment Variables
+
+<ResponseField name="SCAN_WORKSPACE" type="string">
+  Path to the workspace file
+</ResponseField>
+
+<ResponseField name="SCAN_PROJECT" type="string">
+  Path to the project file
+</ResponseField>
+
+<ResponseField name="SCAN_SCHEME" type="string">
+  The project's scheme
+</ResponseField>
+
+<ResponseField name="SCAN_DEVICE" type="string">
+  The device to run tests on
+</ResponseField>
+
+<ResponseField name="SCAN_CLEAN" type="boolean">
+  Should the project be cleaned?
+</ResponseField>
+
+<ResponseField name="SCAN_CODE_COVERAGE" type="boolean">
+  Should code coverage be generated?
+</ResponseField>
+
+<ResponseField name="SCAN_OUTPUT_DIRECTORY" type="string">
+  Output directory for test reports
+</ResponseField>
+
+<ResponseField name="SCAN_OUTPUT_TYPES" type="string">
+  Comma-separated output types
+</ResponseField>
+
+<ResponseField name="SLACK_URL" type="string">
+  Slack webhook URL for notifications
+</ResponseField>
+
+## Tips & Best Practices
+
+<Tip>
+**Use Scanfile**: Store your test configuration in a Scanfile for consistency.
+</Tip>
+
+<Warning>
+**Reset simulator on CI**: Use `reset_simulator: true` on CI to ensure clean test environment.
+</Warning>
+
+<Tip>
+**Enable code coverage**: Set `code_coverage: true` to track test coverage over time.
+</Tip>
+
+<Check>
+**Shared scheme**: Make sure your scheme is marked as "Shared" in Xcode.
+</Check>
+
+## Troubleshooting
+
+### Scheme not found
+
+Make sure the scheme is marked as "Shared" in Xcode:
+1. Product → Scheme → Manage Schemes
+2. Check "Shared" for your scheme
+
+### Simulator not found
+
+List available simulators:
+
+```bash
+xcrun simctl list devices
+```
+
+Then use the exact name:
+
+```ruby
+scan(device: "iPhone 15")
+```
+
+### Tests hang
+
+Try resetting the simulator:
+
+```ruby
+scan(
+  reset_simulator: true,
+  reinstall_app: true
+)
+```
+
+## Related Tools
+
+- [gym](/tools/gym) - Build your app
+- [snapshot](/tools/snapshot) - Automate screenshot generation
+- [slather](https://github.com/SlatherOrg/slather) - Generate code coverage reports

@@ -1,0 +1,590 @@
+---
+title: match
+description: Sync code signing certificates and provisioning profiles across your team
+---
+
+## Overview
+
+match is a new approach to iOS code signing: share one code signing identity across your development team to simplify your codesigning setup and prevent code signing issues.
+
+<Info>
+match stores your certificates and profiles in a git repo, encrypted and synced across your team.
+</Info>
+
+## Why match?
+
+### The Problem
+
+- Every team member has their own code signing identity
+- Certificates and profiles expire randomly
+- Setting up new machines is complicated
+- Certificates often conflict between team members
+
+### The Solution
+
+match creates one shared identity stored in a private git repository, encrypted with a passphrase.
+
+## Installation
+
+match is part of fastlane. Install it with:
+
+```bash
+fastlane match
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Create a git repository">
+    Create a private git repository to store certificates.
+    
+    ```bash
+    # On GitHub, GitLab, or Bitbucket
+    # Make sure it's private!
+    ```
+  </Step>
+  
+  <Step title="Initialize match">
+    ```bash
+    fastlane match init
+    ```
+    
+    This creates a Matchfile with your git repo URL.
+  </Step>
+  
+  <Step title="Generate certificates">
+    ```bash
+    fastlane match appstore
+    fastlane match development
+    ```
+    
+    This generates and encrypts certificates in your git repo.
+  </Step>
+  
+  <Step title="Use on other machines">
+    ```bash
+    fastlane match appstore
+    ```
+    
+    match downloads and installs certificates automatically.
+  </Step>
+</Steps>
+
+## How match Works
+
+<Steps>
+  <Step title="Generate certificates">
+    match generates certificates and provisioning profiles on the Apple Developer Portal.
+  </Step>
+  
+  <Step title="Encrypt and store">
+    Certificates are encrypted with a passphrase and committed to your git repository.
+  </Step>
+  
+  <Step title="Install on team machines">
+    Team members run match to download, decrypt, and install certificates in their keychain.
+  </Step>
+</Steps>
+
+## CLI Commands
+
+<CodeGroup>
+
+```bash Development
+fastlane match development
+```
+
+```bash Ad-Hoc
+fastlane match adhoc
+```
+
+```bash App Store
+fastlane match appstore
+```
+
+```bash Enterprise
+fastlane match enterprise
+```
+
+```bash Initialize
+fastlane match init
+```
+
+```bash Change Password
+fastlane match change_password
+```
+
+```bash Nuke Certificates
+fastlane match nuke development
+fastlane match nuke distribution
+```
+
+</CodeGroup>
+
+## Certificate Types
+
+<ParamField path="development" type="string">
+  Creates iOS/tvOS/macOS development certificates and profiles.
+  
+  ```bash
+  fastlane match development
+  ```
+</ParamField>
+
+<ParamField path="adhoc" type="string">
+  Creates ad-hoc distribution certificates and profiles.
+  
+  ```bash
+  fastlane match adhoc
+  ```
+</ParamField>
+
+<ParamField path="appstore" type="string">
+  Creates App Store distribution certificates and profiles.
+  
+  ```bash
+  fastlane match appstore
+  ```
+</ParamField>
+
+<ParamField path="enterprise" type="string">
+  Creates enterprise distribution certificates and profiles.
+  
+  ```bash
+  fastlane match enterprise
+  ```
+</ParamField>
+
+<ParamField path="developer_id" type="string">
+  Creates Developer ID certificates (macOS).
+  
+  ```bash
+  fastlane match developer_id
+  ```
+</ParamField>
+
+## Key Options
+
+<ParamField path="git_url" type="string">
+  URL to the git repo containing certificates.
+  
+  ```ruby
+  match(
+    type: "appstore",
+    git_url: "https://github.com/company/certificates.git"
+  )
+  ```
+</ParamField>
+
+<ParamField path="app_identifier" type="string/array">
+  The bundle identifier(s) of your app.
+  
+  ```ruby
+  match(
+    type: "appstore",
+    app_identifier: "com.example.app"
+  )
+  ```
+  
+  Or multiple:
+  
+  ```ruby
+  match(
+    type: "appstore",
+    app_identifier: [
+      "com.example.app",
+      "com.example.app.watchkit"
+    ]
+  )
+  ```
+</ParamField>
+
+<ParamField path="type" type="string" default="development">
+  Define the profile type (development, adhoc, appstore, enterprise).
+  
+  ```ruby
+  match(type: "appstore")
+  ```
+</ParamField>
+
+<ParamField path="username" type="string">
+  Your Apple ID username.
+  
+  ```ruby
+  match(username: "user@example.com")
+  ```
+</ParamField>
+
+<ParamField path="team_id" type="string">
+  The ID of your Developer Portal team.
+  
+  ```ruby
+  match(team_id: "Q2CBPJ58CA")
+  ```
+</ParamField>
+
+<ParamField path="readonly" type="boolean" default="false">
+  Only fetch existing certificates, don't generate new ones.
+  
+  ```ruby
+  match(
+    type: "appstore",
+    readonly: true
+  )
+  ```
+</ParamField>
+
+<ParamField path="force" type="boolean" default="false">
+  Renew provisioning profiles every time.
+  
+  ```ruby
+  match(
+    type: "appstore",
+    force: true
+  )
+  ```
+</ParamField>
+
+<ParamField path="force_for_new_devices" type="boolean" default="false">
+  Renew profiles when device count changes.
+  
+  ```ruby
+  match(
+    type: "development",
+    force_for_new_devices: true
+  )
+  ```
+</ParamField>
+
+<ParamField path="git_branch" type="string" default="master">
+  Specific git branch to use.
+  
+  ```ruby
+  match(
+    type: "appstore",
+    git_branch: "production"
+  )
+  ```
+</ParamField>
+
+<ParamField path="git_basic_authorization" type="string">
+  Use basic authorization to access the git repo.
+  
+  ```ruby
+  match(
+    type: "appstore",
+    git_basic_authorization: ENV["GIT_TOKEN"]
+  )
+  ```
+</ParamField>
+
+<ParamField path="keychain_name" type="string" default="login.keychain">
+  Keychain to import certificates to.
+  
+  ```ruby
+  match(
+    type: "appstore",
+    keychain_name: "fastlane.keychain"
+  )
+  ```
+</ParamField>
+
+<ParamField path="keychain_password" type="string">
+  Password for the keychain.
+  
+  ```ruby
+  match(
+    type: "appstore",
+    keychain_name: "fastlane.keychain",
+    keychain_password: ENV["KEYCHAIN_PASSWORD"]
+  )
+  ```
+</ParamField>
+
+<ParamField path="platform" type="string" default="ios">
+  Set the platform (ios, tvos, macos, catalyst).
+  
+  ```ruby
+  match(
+    type: "appstore",
+    platform: "macos"
+  )
+  ```
+</ParamField>
+
+<ParamField path="storage_mode" type="string" default="git">
+  Storage backend (git, google_cloud, s3, gitlab_secure_files).
+  
+  ```ruby
+  match(
+    type: "appstore",
+    storage_mode: "s3",
+    s3_bucket: "my-certificates"
+  )
+  ```
+</ParamField>
+
+## Using with fastlane
+
+### Basic Usage
+
+```ruby
+lane :beta do
+  match(type: "appstore")
+  gym
+  pilot
+end
+```
+
+### Development Build
+
+```ruby
+lane :dev do
+  match(type: "development")
+  gym(export_method: "development")
+end
+```
+
+### Multiple App Identifiers
+
+```ruby
+lane :release do
+  match(
+    type: "appstore",
+    app_identifier: [
+      "com.example.app",
+      "com.example.app.watchkit",
+      "com.example.app.watchkit.extension"
+    ]
+  )
+  gym
+  deliver
+end
+```
+
+### CI/CD Setup
+
+```ruby
+lane :ci_build do
+  create_keychain(
+    name: "ci.keychain",
+    password: ENV["KEYCHAIN_PASSWORD"],
+    default_keychain: true,
+    unlock: true,
+    timeout: 3600
+  )
+  
+  match(
+    type: "appstore",
+    readonly: true,
+    keychain_name: "ci.keychain",
+    keychain_password: ENV["KEYCHAIN_PASSWORD"]
+  )
+  
+  gym
+end
+```
+
+## Storage Backends
+
+### Git (Default)
+
+```ruby
+match(
+  type: "appstore",
+  git_url: "https://github.com/company/certificates.git",
+  git_branch: "main"
+)
+```
+
+### Google Cloud Storage
+
+```ruby
+match(
+  type: "appstore",
+  storage_mode: "google_cloud",
+  google_cloud_bucket_name: "my-certificates",
+  google_cloud_keys_file: "./gc_keys.json"
+)
+```
+
+### Amazon S3
+
+```ruby
+match(
+  type: "appstore",
+  storage_mode: "s3",
+  s3_bucket: "my-certificates",
+  s3_region: "us-east-1"
+)
+```
+
+### GitLab Secure Files
+
+```ruby
+match(
+  type: "appstore",
+  storage_mode: "gitlab_secure_files",
+  gitlab_project: "gitlab-org/gitlab"
+)
+```
+
+## Matchfile
+
+Create a `Matchfile` for persistent configuration:
+
+```ruby
+# Matchfile
+
+git_url "https://github.com/company/certificates.git"
+git_branch "main"
+
+type "appstore"
+
+app_identifier [
+  "com.example.app",
+  "com.example.app.watchkit"
+]
+
+username "user@example.com"
+team_id "Q2CBPJ58CA"
+
+keychain_name "login.keychain"
+```
+
+Generate a template:
+
+```bash
+fastlane match init
+```
+
+## Nuke Command
+
+<Warning>
+**Destructive operation**: The nuke command permanently deletes certificates from the Developer Portal.
+</Warning>
+
+Revoke and delete all certificates:
+
+```bash
+# Delete development certificates
+fastlane match nuke development
+
+# Delete distribution certificates
+fastlane match nuke distribution
+
+# Delete enterprise certificates
+fastlane match nuke enterprise
+```
+
+Then regenerate:
+
+```bash
+fastlane match development
+fastlane match appstore
+```
+
+## Change Password
+
+Re-encrypt all files with a new password:
+
+```bash
+fastlane match change_password
+```
+
+## Environment Variables
+
+<ResponseField name="MATCH_GIT_URL" type="string">
+  URL to the git repo
+</ResponseField>
+
+<ResponseField name="MATCH_TYPE" type="string">
+  Certificate type (development, adhoc, appstore)
+</ResponseField>
+
+<ResponseField name="MATCH_APP_IDENTIFIER" type="string">
+  Bundle identifier
+</ResponseField>
+
+<ResponseField name="MATCH_USERNAME" type="string">
+  Your Apple ID username
+</ResponseField>
+
+<ResponseField name="MATCH_KEYCHAIN_NAME" type="string">
+  Keychain name
+</ResponseField>
+
+<ResponseField name="MATCH_KEYCHAIN_PASSWORD" type="string">
+  Keychain password
+</ResponseField>
+
+<ResponseField name="MATCH_PASSWORD" type="string">
+  Passphrase to decrypt certificates
+</ResponseField>
+
+<ResponseField name="MATCH_READONLY" type="boolean">
+  Readonly mode
+</ResponseField>
+
+## Tips & Best Practices
+
+<Tip>
+**Use private repository**: Always use a private git repository to store certificates.
+</Tip>
+
+<Warning>
+**Save your passphrase**: Store the encryption passphrase in a secure password manager.
+</Warning>
+
+<Tip>
+**One identity per team**: All team members share the same certificates - no more conflicts!
+</Tip>
+
+<Check>
+**CI readonly mode**: Use `readonly: true` on CI to prevent generating new certificates.
+</Check>
+
+## Troubleshooting
+
+### Certificate already exists
+
+Use readonly mode to fetch existing certificates:
+
+```ruby
+match(type: "appstore", readonly: true)
+```
+
+### Wrong passphrase
+
+The passphrase is the one you set when first running match. Store it securely:
+
+```bash
+export MATCH_PASSWORD="your-passphrase"
+```
+
+### Device limit reached
+
+Use nuke to clean up and regenerate:
+
+```bash
+fastlane match nuke development
+fastlane match development
+```
+
+### Git authentication failed
+
+Use a personal access token:
+
+```ruby
+match(
+  type: "appstore",
+  git_basic_authorization: Base64.strict_encode64("username:token")
+)
+```
+
+## Related Tools
+
+- [cert](/tools/cert) - Alternative certificate management
+- [sigh](/tools/sigh) - Alternative provisioning profile management
+- [gym](/tools/gym) - Build your app with match certificates
+- [pilot](/tools/pilot) - Upload to TestFlight

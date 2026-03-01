@@ -1,0 +1,560 @@
+---
+title: Code Signing Actions
+description: Manage certificates, provisioning profiles, and code signing for iOS and macOS
+---
+
+## Overview
+
+Code signing is one of the most challenging aspects of iOS development. fastlane provides several actions to simplify certificate and provisioning profile management.
+
+## Recommended: match (sync_code_signing)
+
+### match
+
+The recommended approach for code signing. Stores certificates and profiles in a git repository for easy team synchronization.
+
+<Note>
+`sync_code_signing` is an alias for `match`.
+</Note>
+
+#### Why match?
+
+- One code signing identity for the whole team
+- Easy setup on new machines
+- No more "certificate invalid" errors
+- Works with multiple teams and apps
+- Supports all provisioning profile types
+
+#### Basic Usage
+
+```ruby
+match(type: "appstore")
+```
+
+#### Parameters
+
+<ParamField path="type" type="string">
+  Profile type: appstore, adhoc, development, or enterprise
+</ParamField>
+
+<ParamField path="app_identifier" type="string or array">
+  Bundle identifier(s) for your app
+</ParamField>
+
+<ParamField path="git_url" type="string">
+  URL to the git repository for storing certificates
+</ParamField>
+
+<ParamField path="git_branch" type="string" default="master">
+  Git branch to use
+</ParamField>
+
+<ParamField path="storage_mode" type="string" default="git">
+  Storage mode: git, google_cloud, s3, gitlab_secure_files
+</ParamField>
+
+<ParamField path="readonly" type="boolean" default="false">
+  Only fetch existing certificates and profiles (don't create new ones)
+</ParamField>
+
+<ParamField path="force_for_new_devices" type="boolean" default="false">
+  Renew profiles when new devices are added
+</ParamField>
+
+<ParamField path="username" type="string">
+  Your Apple ID username
+</ParamField>
+
+<ParamField path="team_id" type="string">
+  Your Developer Portal team ID
+</ParamField>
+
+<ParamField path="platform" type="string" default="ios">
+  Platform: ios, macos, tvos
+</ParamField>
+
+<ParamField path="api_key" type="hash">
+  App Store Connect API key
+</ParamField>
+
+#### Shared Values
+
+- `MATCH_PROVISIONING_PROFILE_MAPPING` - Maps bundle IDs to profile names
+- `SIGH_PROFILE_TYPE` - Profile type for use with `build_app`
+
+#### Examples
+
+```ruby
+# App Store profile
+match(type: "appstore", app_identifier: "tools.fastlane.app")
+
+# Development profile (readonly mode for CI)
+match(type: "development", readonly: true)
+
+# Multiple bundle identifiers
+match(
+  app_identifier: ["tools.fastlane.app", "tools.fastlane.sleepy"]
+)
+
+# Using sync_code_signing alias
+sync_code_signing(
+  type: "appstore",
+  app_identifier: "tools.fastlane.app"
+)
+
+# Complete setup
+match(
+  type: "appstore",
+  app_identifier: "com.example.app",
+  git_url: "https://github.com/myteam/certificates",
+  git_branch: "main",
+  username: "apple@example.com",
+  team_id: "XXXXXXXXXX"
+)
+
+# For CI/CD (readonly mode)
+match(
+  type: "appstore",
+  readonly: true,
+  app_identifier: "com.example.app"
+)
+
+# Update profiles when adding new devices
+match(
+  type: "development",
+  force_for_new_devices: true
+)
+```
+
+#### Integration with build_app
+
+`match` automatically configures `build_app`:
+
+```ruby
+# match sets up everything
+match(type: "appstore")
+
+# build_app automatically uses the right profiles
+build_app(scheme: "MyApp")
+# export_method and provisioning profiles are set automatically
+```
+
+#### Initial Setup
+
+```ruby
+# Run once to initialize match
+match(
+  type: "development",
+  app_identifier: "com.example.app",
+  git_url: "https://github.com/myteam/certificates"
+)
+```
+
+#### Supported Platforms
+
+- iOS
+- macOS
+
+---
+
+## Alternative: Individual Actions
+
+### cert (get_certificates)
+
+Fetch or create iOS code signing certificates.
+
+<Note>
+`cert` is an alias for `get_certificates`.
+</Note>
+
+#### Basic Usage
+
+```ruby
+cert
+```
+
+#### Parameters
+
+<ParamField path="development" type="boolean" default="false">
+  Create a development certificate instead of distribution
+</ParamField>
+
+<ParamField path="username" type="string">
+  Your Apple ID username
+</ParamField>
+
+<ParamField path="team_id" type="string">
+  Your Developer Portal team ID
+</ParamField>
+
+<ParamField path="output_path" type="string" default=".">
+  Path to store the certificate
+</ParamField>
+
+#### Examples
+
+```ruby
+# Get distribution certificate
+cert
+
+# Get development certificate
+cert(development: true)
+
+# Using get_certificates
+get_certificates(
+  username: "apple@example.com",
+  output_path: "./certs"
+)
+```
+
+---
+
+### sigh (get_provisioning_profile)
+
+Fetch or create iOS provisioning profiles.
+
+<Note>
+`sigh` is an alias for `get_provisioning_profile`.
+</Note>
+
+#### Basic Usage
+
+```ruby
+sigh
+```
+
+#### Parameters
+
+<ParamField path="adhoc" type="boolean" default="false">
+  Create an ad-hoc profile
+</ParamField>
+
+<ParamField path="development" type="boolean" default="false">
+  Create a development profile
+</ParamField>
+
+<ParamField path="app_identifier" type="string">
+  Bundle identifier for the app
+</ParamField>
+
+<ParamField path="username" type="string">
+  Your Apple ID username
+</ParamField>
+
+<ParamField path="team_id" type="string">
+  Your Developer Portal team ID
+</ParamField>
+
+<ParamField path="output_path" type="string" default=".">
+  Path to store the profile
+</ParamField>
+
+<ParamField path="filename" type="string">
+  Custom filename for the profile
+</ParamField>
+
+<ParamField path="force" type="boolean" default="false">
+  Force recreate the profile
+</ParamField>
+
+#### Examples
+
+```ruby
+# Get App Store profile
+sigh
+
+# Get ad-hoc profile
+sigh(adhoc: true)
+
+# Get development profile
+sigh(development: true)
+
+# Complete configuration
+sigh(
+  app_identifier: "com.example.app",
+  username: "apple@example.com",
+  team_id: "XXXXXXXXXX",
+  output_path: "./profiles"
+)
+```
+
+---
+
+## Project Configuration Actions
+
+### update_code_signing_settings
+
+Update Xcode project code signing settings.
+
+#### Basic Usage
+
+```ruby
+update_code_signing_settings(
+  use_automatic_signing: false,
+  path: "MyApp.xcodeproj"
+)
+```
+
+#### Parameters
+
+<ParamField path="path" type="string">
+  Path to your Xcode project
+</ParamField>
+
+<ParamField path="use_automatic_signing" type="boolean" default="false">
+  Enable or disable automatic signing
+</ParamField>
+
+<ParamField path="team_id" type="string">
+  Team ID for signing
+</ParamField>
+
+<ParamField path="targets" type="array">
+  Specific targets to update (defaults to all)
+</ParamField>
+
+<ParamField path="build_configurations" type="array">
+  Specific build configurations to update (defaults to all)
+</ParamField>
+
+<ParamField path="code_sign_identity" type="string">
+  Code signing identity (e.g., "iPhone Distribution")
+</ParamField>
+
+<ParamField path="profile_name" type="string">
+  Provisioning profile name
+</ParamField>
+
+<ParamField path="profile_uuid" type="string">
+  Provisioning profile UUID
+</ParamField>
+
+<ParamField path="bundle_identifier" type="string">
+  Bundle identifier to set
+</ParamField>
+
+<ParamField path="entitlements_file_path" type="string">
+  Path to entitlements file
+</ParamField>
+
+<ParamField path="sdk" type="string">
+  SDK to set settings for (e.g., "iphoneos*")
+</ParamField>
+
+#### Examples
+
+```ruby
+# Enable manual code signing
+update_code_signing_settings(
+  use_automatic_signing: false,
+  path: "MyApp.xcodeproj"
+)
+
+# Enable automatic code signing
+update_code_signing_settings(
+  use_automatic_signing: true,
+  path: "MyApp.xcodeproj"
+)
+
+# Configure manual signing
+update_code_signing_settings(
+  use_automatic_signing: false,
+  path: "MyApp.xcodeproj",
+  team_id: "QABC123DEV",
+  bundle_identifier: "com.demoapp.QABC123DEV",
+  code_sign_identity: "iPhone Distribution",
+  sdk: "iphoneos*",
+  profile_name: "Demo App Deployment Profile",
+  entitlements_file_path: "Demo App/generated/New.entitlements"
+)
+
+# Update specific targets only
+update_code_signing_settings(
+  use_automatic_signing: false,
+  path: "MyApp.xcodeproj",
+  targets: ["MyApp", "MyAppExtension"]
+)
+
+# Update specific configurations
+update_code_signing_settings(
+  use_automatic_signing: false,
+  path: "MyApp.xcodeproj",
+  build_configurations: ["Release", "Beta"]
+)
+```
+
+#### Supported Platforms
+
+- iOS
+- macOS
+
+---
+
+## Complete Code Signing Workflows
+
+### Using match (Recommended)
+
+```ruby
+lane :release do
+  # Get App Store certificates and profiles
+  match(type: "appstore")
+  
+  # Build automatically uses match settings
+  build_app(scheme: "MyApp")
+  
+  # Upload to App Store
+  upload_to_app_store
+end
+
+lane :beta do
+  # Get TestFlight certificates and profiles
+  match(type: "appstore")
+  
+  # Build
+  build_app(scheme: "MyApp")
+  
+  # Upload to TestFlight
+  upload_to_testflight
+end
+
+lane :development do
+  # Get development certificates and profiles
+  match(
+    type: "development",
+    force_for_new_devices: true
+  )
+  
+  # Build for testing
+  build_app(
+    scheme: "MyApp",
+    export_method: "development"
+  )
+end
+```
+
+### Using cert and sigh
+
+```ruby
+lane :release do
+  # Get certificate
+  cert
+  
+  # Get provisioning profile
+  sigh(app_identifier: "com.example.app")
+  
+  # Build
+  build_app(
+    scheme: "MyApp",
+    export_method: "app-store"
+  )
+  
+  # Upload
+  upload_to_app_store
+end
+```
+
+### CI/CD with match
+
+```ruby
+lane :ci_build do
+  # Setup CI
+  setup_ci
+  
+  # Get certificates and profiles (readonly mode)
+  match(
+    type: "appstore",
+    readonly: true
+  )
+  
+  # Build
+  build_app(scheme: "MyApp")
+  
+  # Upload
+  upload_to_testflight
+end
+```
+
+### Manual Signing Configuration
+
+```ruby
+lane :configure_signing do
+  # Disable automatic signing
+  update_code_signing_settings(
+    use_automatic_signing: false,
+    path: "MyApp.xcodeproj"
+  )
+  
+  # Get certificates and profiles
+  match(type: "appstore")
+  
+  # Update project with match profiles
+  update_code_signing_settings(
+    use_automatic_signing: false,
+    path: "MyApp.xcodeproj",
+    profile_name: ENV["sigh_com.example.app_appstore_profile-name"]
+  )
+end
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use match for teams">
+    match is the best solution for teams:
+    
+    ```ruby
+    # One command to get everything
+    match(type: "appstore")
+    build_app(scheme: "MyApp")
+    ```
+  </Accordion>
+  
+  <Accordion title="Use readonly mode in CI">
+    Never create certificates in CI:
+    
+    ```ruby
+    match(
+      type: "appstore",
+      readonly: true  # Only fetch, never create
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Handle multiple bundle identifiers">
+    Use arrays for apps with extensions:
+    
+    ```ruby
+    match(
+      type: "appstore",
+      app_identifier: [
+        "com.example.app",
+        "com.example.app.widget",
+        "com.example.app.extension"
+      ]
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Use App Store Connect API keys">
+    Avoid storing passwords:
+    
+    ```ruby
+    api_key = app_store_connect_api_key(
+      key_id: "D383SF739",
+      issuer_id: "6053b7fe-68a8-4acb-89be-165aa6465141",
+      key_filepath: "./AuthKey_D383SF739.p8"
+    )
+    
+    match(
+      type: "appstore",
+      api_key: api_key
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Actions
+
+- [build_app](/actions/building#build_app) - Build with code signing
+- [register_devices](/actions/project-management) - Register test devices
+- [app_store_connect_api_key](/actions/app-store) - API authentication

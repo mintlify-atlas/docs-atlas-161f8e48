@@ -1,0 +1,178 @@
+---
+title: "Installation"
+description: "Install fastlane on your machine"
+---
+
+## System requirements
+
+Before installing fastlane, ensure your system meets these requirements:
+
+- **Ruby 2.7.0 or higher** (Ruby 3.2.0 or higher recommended)
+- **macOS** for iOS development (Xcode required)
+- **macOS, Linux, or Windows** (via WSL) for Android development
+
+<Note>
+  Check your Ruby version with `ruby --version`. If you need to install or update Ruby, visit [ruby-lang.org](https://www.ruby-lang.org/en/documentation/installation/).
+</Note>
+
+## Installation methods
+
+Choose the installation method that works best for your workflow.
+
+<CodeGroup>
+
+```bash RubyGems (recommended)
+gem install fastlane
+```
+
+```bash Homebrew
+brew install fastlane
+```
+
+```ruby Bundler
+# Add to your Gemfile
+gem "fastlane"
+
+# Then run
+bundle install
+```
+
+</CodeGroup>
+
+### Using RubyGems
+
+The simplest way to install fastlane is via RubyGems:
+
+```bash
+gem install fastlane
+```
+
+This installs the latest stable version of fastlane globally on your system.
+
+### Using Homebrew
+
+If you prefer Homebrew on macOS:
+
+```bash
+brew install fastlane
+```
+
+<Warning>
+  The Homebrew installation may not always be up-to-date. For the latest version, use RubyGems or Bundler.
+</Warning>
+
+### Using Bundler (recommended for teams)
+
+For teams working on the same project, using Bundler ensures everyone uses the same fastlane version:
+
+<Steps>
+  <Step title="Create a Gemfile">
+    If you don't have a `Gemfile` in your project root, create one:
+
+    ```ruby Gemfile
+    source "https://rubygems.org"
+
+    gem "fastlane"
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Run bundler to install fastlane and its dependencies:
+
+    ```bash
+    bundle install
+    ```
+  </Step>
+
+  <Step title="Run with bundle exec">
+    When using Bundler, always prefix fastlane commands with `bundle exec`:
+
+    ```bash
+    bundle exec fastlane --version
+    ```
+
+    This ensures you're using the version specified in your `Gemfile.lock`.
+  </Step>
+</Steps>
+
+<Tip>
+  Using Bundler is the recommended approach for team projects. It prevents version conflicts and ensures consistent behavior across different machines.
+</Tip>
+
+## Verify installation
+
+Confirm fastlane is installed correctly:
+
+```bash
+fastlane --version
+```
+
+You should see output similar to:
+
+```no-highlight
+fastlane installation at path:
+/usr/local/lib/ruby/gems/3.2.0/gems/fastlane-2.232.2/bin/fastlane
+-----------------------------
+fastlane 2.232.2
+```
+
+## Environment setup
+
+### Set up PATH
+
+If you installed fastlane via RubyGems and the command isn't found, you may need to add Ruby's gem bin directory to your PATH:
+
+```bash
+export PATH="$HOME/.gem/ruby/X.X.0/bin:$PATH"
+```
+
+Replace `X.X.0` with your Ruby version (check with `ruby --version`).
+
+Add this line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, or `~/.bash_profile`) to make it permanent.
+
+### Set up UTF-8 locale
+
+fastlane requires your locale to be set to UTF-8. Check your locale settings:
+
+```bash
+locale
+```
+
+If your locale is not UTF-8, set it in your shell configuration:
+
+```bash
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+```
+
+## Troubleshooting
+
+### Permission errors
+
+If you encounter permission errors during installation, avoid using `sudo`. Instead:
+
+1. Use a Ruby version manager like [rbenv](https://github.com/rbenv/rbenv) or [RVM](https://rvm.io/)
+2. Or install to a user directory:
+
+```bash
+gem install fastlane --user-install
+```
+
+### Ruby version warnings
+
+If you see a warning about your Ruby version:
+
+```no-highlight
+WARNING: Support for your Ruby version (2.7.0) is going away. 
+fastlane will soon require Ruby 3.2.0 or newer.
+```
+
+Consider upgrading to Ruby 3.2.0 or higher for the best experience and future compatibility.
+
+## Next steps
+
+Now that fastlane is installed, set up your first project:
+
+<Card title="Quickstart" icon="bolt" href="/quickstart">
+  Initialize fastlane in your project and run your first lane
+</Card>

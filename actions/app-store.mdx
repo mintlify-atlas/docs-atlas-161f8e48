@@ -1,0 +1,424 @@
+---
+title: App Store Actions
+description: Upload and manage apps on the App Store, TestFlight, and Google Play Store
+---
+
+## Overview
+
+fastlane provides powerful actions to automate uploading your apps to the App Store, TestFlight, and Google Play Store. These actions handle metadata, screenshots, and binary uploads with minimal configuration.
+
+## iOS App Store Actions
+
+### upload_to_app_store
+
+Upload metadata and binaries to App Store Connect (previously iTunes Connect).
+
+<Note>
+`deliver` and `appstore` are aliases for `upload_to_app_store`.
+</Note>
+
+#### Basic Usage
+
+```ruby
+upload_to_app_store
+```
+
+When used after `build_app` and `capture_screenshots`, this action automatically uploads the latest IPA and screenshots.
+
+#### Parameters
+
+<ParamField path="force" type="boolean" default="false">
+  Skip HTML preview verification (useful for CI)
+</ParamField>
+
+<ParamField path="ipa" type="string">
+  Path to your IPA file (automatically detected if using `build_app`)
+</ParamField>
+
+<ParamField path="pkg" type="string">
+  Path to your PKG file for macOS apps
+</ParamField>
+
+<ParamField path="screenshots_path" type="string">
+  Path to screenshots directory (automatically detected if using `snapshot`)
+</ParamField>
+
+<ParamField path="metadata_path" type="string">
+  Path to metadata folder
+</ParamField>
+
+<ParamField path="username" type="string">
+  Your Apple ID username
+</ParamField>
+
+<ParamField path="app_identifier" type="string">
+  The bundle identifier of your app
+</ParamField>
+
+<ParamField path="itc_provider" type="string">
+  The provider short name for iTunes Transporter
+</ParamField>
+
+<ParamField path="skip_screenshots" type="boolean" default="false">
+  Don't upload screenshots
+</ParamField>
+
+<ParamField path="skip_metadata" type="boolean" default="false">
+  Don't upload metadata
+</ParamField>
+
+<ParamField path="skip_app_version_update" type="boolean" default="false">
+  Don't update app version
+</ParamField>
+
+<ParamField path="api_key" type="hash">
+  App Store Connect API key (recommended over username/password)
+</ParamField>
+
+#### Examples
+
+```ruby
+# Skip HTML preview for CI
+upload_to_app_store(
+  force: true,
+  itc_provider: "abcde12345"
+)
+
+# Using deliver alias
+deliver
+
+# Using appstore alias
+appstore
+
+# Complete example with all common options
+upload_to_app_store(
+  username: "apple@fastlane.tools",
+  app_identifier: "tools.fastlane.app",
+  ipa: "./MyApp.ipa",
+  skip_screenshots: true,
+  force: true
+)
+```
+
+#### Supported Platforms
+
+- iOS
+- macOS
+- visionOS
+
+---
+
+### upload_to_testflight
+
+Upload new builds to TestFlight for beta testing.
+
+<Note>
+`testflight` and `pilot` are aliases for `upload_to_testflight`.
+</Note>
+
+#### Basic Usage
+
+```ruby
+upload_to_testflight
+```
+
+#### Parameters
+
+<ParamField path="username" type="string">
+  Your Apple ID username
+</ParamField>
+
+<ParamField path="app_identifier" type="string">
+  The bundle identifier of your app
+</ParamField>
+
+<ParamField path="ipa" type="string">
+  Path to IPA file (automatically detected if using `build_app`)
+</ParamField>
+
+<ParamField path="skip_submission" type="boolean" default="false">
+  Only upload the build, don't submit for review
+</ParamField>
+
+<ParamField path="skip_waiting_for_build_processing" type="boolean" default="false">
+  Skip waiting for build processing to complete
+</ParamField>
+
+<ParamField path="distribute_only" type="boolean" default="false">
+  Distribute a previously uploaded build
+</ParamField>
+
+<ParamField path="changelog" type="string">
+  Changelog for this build
+</ParamField>
+
+<ParamField path="beta_app_description" type="string">
+  Description for beta testers
+</ParamField>
+
+<ParamField path="beta_app_feedback_email" type="string">
+  Email for beta feedback
+</ParamField>
+
+<ParamField path="notify_external_testers" type="boolean" default="true">
+  Notify external testers about this build
+</ParamField>
+
+<ParamField path="demo_account_required" type="boolean" default="false">
+  Require demo account for review
+</ParamField>
+
+<ParamField path="itc_provider" type="string">
+  The provider short name for iTunes Transporter
+</ParamField>
+
+#### Examples
+
+```ruby
+# Basic upload
+upload_to_testflight
+
+# Upload only (don't submit)
+upload_to_testflight(skip_submission: true)
+
+# Complete example
+upload_to_testflight(
+  username: "felix@krausefx.com",
+  app_identifier: "com.krausefx.app",
+  itc_provider: "abcde12345"
+)
+
+# With beta app information
+upload_to_testflight(
+  beta_app_feedback_email: "email@email.com",
+  beta_app_description: "This is a description of my app",
+  demo_account_required: true,
+  notify_external_testers: false,
+  changelog: "Bug fixes and performance improvements"
+)
+
+# With review information
+upload_to_testflight(
+  beta_app_review_info: {
+    contact_email: "email@email.com",
+    contact_first_name: "Connect",
+    contact_last_name: "API",
+    contact_phone: "5558675309",
+    demo_account_name: "demo@email.com",
+    demo_account_password: "connectapi",
+    notes: "Thank you for reviewing!"
+  }
+)
+
+# With localized information
+upload_to_testflight(
+  localized_app_info: {
+    "default": {
+      feedback_email: "default@email.com",
+      marketing_url: "https://example.com/marketing-default",
+      privacy_policy_url: "https://example.com/privacy-default",
+      description: "Default description"
+    },
+    "en-GB": {
+      feedback_email: "en-gb@email.com",
+      marketing_url: "https://example.com/marketing-en-gb",
+      privacy_policy_url: "https://example.com/privacy-en-gb",
+      description: "en-gb description"
+    }
+  },
+  localized_build_info: {
+    "default": {
+      whats_new: "Default changelog"
+    },
+    "en-GB": {
+      whats_new: "en-gb changelog"
+    }
+  }
+)
+```
+
+#### Supported Platforms
+
+- iOS
+- macOS
+- tvOS
+
+---
+
+## Android Play Store Actions
+
+### upload_to_play_store
+
+Upload metadata, screenshots, and binaries to Google Play Store.
+
+<Note>
+`supply` is an alias for `upload_to_play_store`.
+</Note>
+
+#### Basic Usage
+
+```ruby
+upload_to_play_store
+```
+
+#### Key Parameters
+
+<ParamField path="package_name" type="string">
+  The package name of your app
+</ParamField>
+
+<ParamField path="track" type="string" default="production">
+  The track to upload to (production, beta, alpha, internal)
+</ParamField>
+
+<ParamField path="apk" type="string">
+  Path to your APK file
+</ParamField>
+
+<ParamField path="aab" type="string">
+  Path to your AAB (Android App Bundle) file
+</ParamField>
+
+<ParamField path="json_key" type="string">
+  Path to Google Play service account JSON key file
+</ParamField>
+
+<ParamField path="skip_upload_metadata" type="boolean" default="false">
+  Don't upload metadata
+</ParamField>
+
+<ParamField path="skip_upload_images" type="boolean" default="false">
+  Don't upload images/screenshots
+</ParamField>
+
+<ParamField path="skip_upload_screenshots" type="boolean" default="false">
+  Don't upload screenshots
+</ParamField>
+
+<ParamField path="skip_upload_apk" type="boolean" default="false">
+  Don't upload APK
+</ParamField>
+
+<ParamField path="skip_upload_aab" type="boolean" default="false">
+  Don't upload AAB
+</ParamField>
+
+#### Examples
+
+```ruby
+# Basic upload
+upload_to_play_store(
+  track: "beta",
+  aab: "app/build/outputs/bundle/release/app-release.aab"
+)
+
+# Using supply alias
+supply(
+  track: "production",
+  apk: "app-release.apk"
+)
+
+# Upload to internal testing
+upload_to_play_store(
+  package_name: "com.example.app",
+  track: "internal",
+  aab: "app-release.aab",
+  json_key: "google-play-key.json"
+)
+```
+
+#### Supported Platforms
+
+- Android
+
+---
+
+### upload_to_play_store_internal_app_sharing
+
+Upload to Google Play Internal App Sharing for quick testing.
+
+#### Basic Usage
+
+```ruby
+upload_to_play_store_internal_app_sharing(
+  package_name: "com.example.app",
+  aab: "app-release.aab",
+  json_key: "google-play-key.json"
+)
+```
+
+<Tip>
+Internal App Sharing is perfect for quickly sharing builds with your team without going through the full release process.
+</Tip>
+
+---
+
+## Complete Workflow Examples
+
+### iOS App Store Release
+
+```ruby
+lane :release do
+  # Build the app
+  build_app(scheme: "MyApp")
+  
+  # Capture screenshots
+  capture_screenshots
+  
+  # Upload to App Store
+  upload_to_app_store(
+    force: true,
+    submit_for_review: true,
+    automatic_release: true
+  )
+end
+```
+
+### TestFlight Beta
+
+```ruby
+lane :beta do
+  # Increment build number
+  increment_build_number
+  
+  # Build the app
+  build_app(scheme: "MyApp")
+  
+  # Upload to TestFlight
+  upload_to_testflight(
+    changelog: "Bug fixes and improvements",
+    distribute_external: true,
+    groups: ["Beta Testers"]
+  )
+  
+  # Send notification
+  slack(message: "New beta build uploaded!")
+end
+```
+
+### Android Play Store Release
+
+```ruby
+lane :playstore do
+  # Build AAB
+  gradle(
+    task: "bundle",
+    build_type: "Release"
+  )
+  
+  # Upload to Play Store
+  upload_to_play_store(
+    track: "production",
+    aab: lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH],
+    skip_upload_metadata: false,
+    skip_upload_images: false
+  )
+end
+```
+
+## Related Actions
+
+- [build_app](/actions/building#build_app) - Build your iOS app
+- [gradle](/actions/building#gradle) - Build your Android app
+- [capture_screenshots](/actions/testing#snapshot) - Generate screenshots
+- [increment_build_number](/actions/versioning#increment_build_number) - Manage versions

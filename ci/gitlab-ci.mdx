@@ -1,0 +1,653 @@
+---
+title: GitLab CI Integration
+description: Set up fastlane on GitLab CI for automated iOS and macOS builds
+---
+
+## Overview
+
+GitLab CI/CD is GitLab's built-in continuous integration platform. It supports macOS runners for iOS and macOS builds and can be self-hosted or cloud-based.
+
+## Quick Start
+
+Add this to your `Fastfile`:
+
+```ruby
+platform :ios do
+  before_all do
+    setup_ci if is_ci
+  end
+
+  lane :test do
+    run_tests(scheme: "MyApp")
+  end
+
+  lane :beta do
+    match(type: "appstore")
+    build_app(scheme: "MyApp")
+    upload_to_testflight
+  end
+end
+```
+
+## GitLab CI Configuration
+
+### Basic .gitlab-ci.yml
+
+Create `.gitlab-ci.yml` in your repository root:
+
+```yaml
+stages:
+  - test
+  - deploy
+
+variables:
+  LC_ALL: "en_US.UTF-8"
+  LANG: "en_US.UTF-8"
+  FASTLANE_SKIP_UPDATE_CHECK: "1"
+  FASTLANE_HIDE_CHANGELOG: "1"
+
+before_script:
+  - bundle install --path vendor/bundle
+
+test:
+  stage: test
+  tags:
+    - macos
+    - xcode
+  script:
+    - bundle exec fastlane test
+  artifacts:
+    reports:
+      junit: fastlane/test_output/report.junit
+    paths:
+      - fastlane/test_output/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+```
+
+### Advanced Configuration with Deployment
+
+```yaml
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  LC_ALL: "en_US.UTF-8"
+  LANG: "en_US.UTF-8"
+  FL_OUTPUT_DIR: "output"
+  FASTLANE_SKIP_UPDATE_CHECK: "1"
+  FASTLANE_HIDE_CHANGELOG: "1"
+
+# Cache dependencies
+cache:
+  key:
+    files:
+      - Gemfile.lock
+      - Podfile.lock
+  paths:
+    - vendor/bundle
+    - Pods/
+
+before_script:
+  - gem install bundler
+  - bundle config set path 'vendor/bundle'
+  - bundle install --jobs $(nproc)
+  - bundle exec pod install
+
+# Run tests
+test:
+  stage: test
+  tags:
+    - macos
+  script:
+    - bundle exec fastlane test
+  coverage: '/\d+\.\d+%\s+coverage/'
+  artifacts:
+    reports:
+      junit: output/scan/*.junit
+      coverage_report:
+        coverage_format: cobertura
+        path: output/scan/coverage.xml
+    paths:
+      - output/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Build IPA
+build:
+  stage: build
+  tags:
+    - macos
+  script:
+    - bundle exec fastlane build
+  artifacts:
+    paths:
+      - output/*.ipa
+      - output/*.dSYM.zip
+    expire_in: 1 month
+  only:
+    - main
+    - tags
+
+# Deploy to TestFlight
+deploy_testflight:
+  stage: deploy
+  tags:
+    - macos
+  script:
+    - bundle exec fastlane beta
+  only:
+    - main
+  when: manual
+
+# Deploy to App Store
+deploy_appstore:
+  stage: deploy
+  tags:
+    - macos
+  script:
+    - bundle exec fastlane release
+  only:
+    - tags
+  when: manual
+```
+
+### Multi-Branch Strategy
+
+```yaml
+stages:
+  - test
+  - deploy
+
+variables:
+  LC_ALL: "en_US.UTF-8"
+  LANG: "en_US.UTF-8"
+
+.setup:
+  before_script:
+    - bundle install --path vendor/bundle
+  tags:
+    - macos
+  cache:
+    paths:
+      - vendor/bundle
+      - Pods/
+
+test:mr:
+  extends: .setup
+  stage: test
+  script:
+    - bundle exec fastlane test
+  only:
+    - merge_requests
+
+test:develop:
+  extends: .setup
+  stage: test
+  script:
+    - bundle exec fastlane test
+  only:
+    - develop
+
+deploy:beta:
+  extends: .setup
+  stage: deploy
+  script:
+    - bundle exec fastlane beta
+  artifacts:
+    paths:
+      - output/*.ipa
+  only:
+    - main
+
+deploy:release:
+  extends: .setup
+  stage: deploy
+  script:
+    - bundle exec fastlane release
+  only:
+    - /^v\d+\.\d+\.\d+$/  # Only version tags like v1.0.0
+  when: manual
+```
+
+### Using Docker (for Linux builds)
+
+For non-iOS projects or testing on Linux:
+
+```yaml
+image: ruby:3.2
+
+stages:
+  - test
+
+variables:
+  FASTLANE_SKIP_UPDATE_CHECK: "1"
+
+before_script:
+  - apt-get update -qq
+  - bundle install --path vendor/bundle
+
+test:
+  stage: test
+  script:
+    - bundle exec fastlane test
+  only:
+    - merge_requests
+    - main
+```
+
+## Setting Up macOS Runners
+
+### Self-Hosted macOS Runner
+
+<Steps>
+  <Step title="Install GitLab Runner">
+    On your macOS machine:
+    
+    ```bash
+    # Download GitLab Runner
+    curl --output /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64
+    
+    # Make it executable
+    chmod +x /usr/local/bin/gitlab-runner
+    
+    # Install and start service
+    gitlab-runner install
+    gitlab-runner start
+    ```
+  </Step>
+  
+  <Step title="Register Runner">
+    ```bash
+    gitlab-runner register
+    ```
+    
+    Provide:
+    - GitLab instance URL
+    - Registration token (from GitLab project settings)
+    - Description: `macos-runner`
+    - Tags: `macos,xcode,ios`
+    - Executor: `shell`
+  </Step>
+  
+  <Step title="Configure Runner">
+    Edit `/Users/YOUR_USER/gitlab-runner/config.toml`:
+    
+    ```toml
+    [[runners]]
+      name = "macos-runner"
+      url = "https://gitlab.com/"
+      token = "YOUR_TOKEN"
+      executor = "shell"
+      builds_dir = "/Users/YOUR_USER/builds"
+      cache_dir = "/Users/YOUR_USER/cache"
+      [runners.custom_build_dir]
+        enabled = true
+    ```
+  </Step>
+</Steps>
+
+## Environment Variables and Secrets
+
+### Setting Up CI/CD Variables
+
+<Steps>
+  <Step title="Navigate to Project Settings">
+    Go to your GitLab project → **Settings** → **CI/CD** → **Variables**
+  </Step>
+  
+  <Step title="Add Variables">
+    Click **Add Variable** and configure:
+    
+    **App Store Connect API Key:**
+    - `APP_STORE_CONNECT_API_KEY_KEY_ID` (Protected, Masked)
+    - `APP_STORE_CONNECT_API_KEY_ISSUER_ID` (Protected, Masked)
+    - `APP_STORE_CONNECT_API_KEY_KEY` (Protected, Masked, Type: File)
+    
+    **Match:**
+    - `MATCH_PASSWORD` (Protected, Masked)
+    - `MATCH_GIT_URL` (Protected)
+    - `MATCH_GIT_BASIC_AUTHORIZATION` (Protected, Masked)
+  </Step>
+  
+  <Step title="Use in Pipeline">
+    Variables are automatically available in your CI scripts:
+    
+    ```yaml
+    deploy_testflight:
+      script:
+        - bundle exec fastlane beta
+      variables:
+        MATCH_READONLY: "true"
+    ```
+  </Step>
+</Steps>
+
+### Protected and Masked Variables
+
+```yaml
+# Only available on protected branches (main, tags)
+deploy:
+  stage: deploy
+  script:
+    - bundle exec fastlane release
+  only:
+    - main
+    - tags
+  # APP_STORE_CONNECT_API_KEY_* variables available here
+```
+
+### GitLab CI Built-in Variables
+
+```bash
+GITLAB_CI=true                   # Running on GitLab CI
+CI=true                          # Generic CI indicator
+CI_COMMIT_REF_NAME=main          # Branch or tag name
+CI_COMMIT_SHA=abc123...          # Commit SHA
+CI_COMMIT_SHORT_SHA=abc123       # Short commit SHA
+CI_COMMIT_TAG=v1.0.0             # Tag name (if any)
+CI_PIPELINE_ID=12345             # Pipeline ID
+CI_PIPELINE_IID=42               # Pipeline number
+CI_JOB_ID=67890                  # Job ID
+CI_PROJECT_NAME=my-app           # Project name
+CI_PROJECT_PATH=group/my-app     # Full project path
+CI_MERGE_REQUEST_IID=123         # MR number
+```
+
+Use in Fastfile:
+
+```ruby
+lane :beta do
+  # Use GitLab pipeline ID as build number
+  increment_build_number(
+    build_number: ENV['CI_PIPELINE_IID']
+  )
+  
+  # Tag with commit SHA
+  version = "beta-#{ENV['CI_COMMIT_SHORT_SHA']}"
+  
+  build_app(scheme: "MyApp")
+  upload_to_testflight
+end
+```
+
+## Example Fastfile
+
+```ruby
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    setup_ci if is_ci
+  end
+
+  desc "Run tests"
+  lane :test do
+    run_tests(
+      scheme: "MyApp",
+      devices: ["iPhone 15"],
+      code_coverage: true,
+      output_directory: ENV['FL_OUTPUT_DIR'] || 'output'
+    )
+  end
+
+  desc "Build IPA"
+  lane :build do
+    # Sync certificates
+    match(
+      type: "appstore",
+      readonly: is_ci
+    )
+    
+    # Build
+    build_app(
+      scheme: "MyApp",
+      export_method: "app-store",
+      output_directory: ENV['FL_OUTPUT_DIR'] || 'output'
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    # Check if running on GitLab CI
+    if ENV['GITLAB_CI']
+      UI.message("Running on GitLab CI - Pipeline #{ENV['CI_PIPELINE_IID']}")
+    end
+    
+    # Sync certificates
+    match(
+      type: "appstore",
+      readonly: is_ci
+    )
+    
+    # Use GitLab pipeline number
+    increment_build_number(
+      build_number: ENV['CI_PIPELINE_IID'] || "1"
+    )
+    
+    # Run tests first
+    test
+    
+    # Build
+    build_app(
+      scheme: "MyApp",
+      export_method: "app-store",
+      output_directory: ENV['FL_OUTPUT_DIR'] || 'output'
+    )
+    
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      changelog: "Build from GitLab CI pipeline #{ENV['CI_PIPELINE_IID']}"
+    )
+  end
+
+  desc "Deploy to App Store"
+  lane :release do
+    # Only allow from tags
+    unless ENV['CI_COMMIT_TAG']
+      UI.user_error!("Release lane should only run on tags")
+    end
+    
+    match(type: "appstore", readonly: is_ci)
+    
+    build_app(
+      scheme: "MyApp",
+      export_method: "app-store"
+    )
+    
+    upload_to_app_store(
+      submit_for_review: false,
+      automatic_release: false
+    )
+  end
+
+  after_all do |lane|
+    clean_build_artifacts if is_ci
+  end
+
+  error do |lane, exception|
+    puts "Error in lane #{lane}: #{exception}"
+  end
+end
+```
+
+## Best Practices
+
+### 1. Use Caching
+
+Cache dependencies between pipeline runs:
+
+```yaml
+cache:
+  key:
+    files:
+      - Gemfile.lock
+      - Podfile.lock
+  paths:
+    - vendor/bundle
+    - Pods/
+    - ~/.cocoapods
+```
+
+### 2. Use Job Templates
+
+Define reusable templates:
+
+```yaml
+.ios_job:
+  tags:
+    - macos
+  before_script:
+    - bundle install --path vendor/bundle
+  cache:
+    paths:
+      - vendor/bundle
+
+test:
+  extends: .ios_job
+  script:
+    - bundle exec fastlane test
+
+build:
+  extends: .ios_job
+  script:
+    - bundle exec fastlane build
+```
+
+### 3. Use Artifacts
+
+Store build outputs:
+
+```yaml
+artifacts:
+  paths:
+    - output/*.ipa
+    - output/*.dSYM.zip
+  expire_in: 30 days
+```
+
+### 4. Manual Deployments
+
+Require manual approval for production:
+
+```yaml
+deploy:release:
+  when: manual
+  only:
+    - main
+    - tags
+```
+
+### 5. Use Protected Variables
+
+Mark sensitive variables as protected and masked:
+
+- **Protected**: Only available on protected branches
+- **Masked**: Hidden in job logs
+
+## Common Issues
+
+### Keychain Errors
+
+**Problem:** `User interaction is not allowed`
+
+**Solution:** Ensure `setup_ci` is called:
+
+```ruby
+before_all do
+  setup_ci
+end
+```
+
+### Runner Permission Issues
+
+**Problem:** Runner can't access files
+
+**Solution:** Run GitLab Runner as your user account:
+
+```bash
+# Stop service
+gitlab-runner stop
+
+# Uninstall service
+gitlab-runner uninstall
+
+# Install as your user
+gitlab-runner install --user=$(whoami)
+
+# Start service
+gitlab-runner start
+```
+
+### Match Repository Access
+
+**Problem:** Can't clone match repository
+
+**Solution:** Use SSH key or deploy token:
+
+**SSH Key:**
+```bash
+# Add SSH private key as CI variable: MATCH_SSH_KEY
+# In before_script:
+- mkdir -p ~/.ssh
+- echo "$MATCH_SSH_KEY" > ~/.ssh/id_rsa
+- chmod 600 ~/.ssh/id_rsa
+- ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
+```
+
+**Deploy Token:**
+```bash
+# Create deploy token in match repository
+# Add as MATCH_GIT_BASIC_AUTHORIZATION
+echo -n "gitlab-ci-token:$CI_JOB_TOKEN" | base64
+```
+
+### Cache Not Working
+
+**Problem:** Dependencies re-downloaded every time
+
+**Solution:** Verify cache configuration:
+
+```yaml
+cache:
+  key:
+    files:
+      - Gemfile.lock  # Must exist
+  paths:
+    - vendor/bundle
+```
+
+## GitLab vs Other CI Platforms
+
+### Advantages of GitLab CI
+
+- Integrated with GitLab repository
+- Free for self-hosted runners
+- Built-in container registry
+- Native Kubernetes integration
+- Powerful caching system
+
+### Comparison
+
+| Feature | GitLab CI | GitHub Actions | CircleCI |
+|---------|-----------|----------------|----------|
+| Self-hosted runners | Yes | Yes | Limited |
+| macOS runners | Self-hosted | Cloud (free for public) | Cloud (paid) |
+| Cache | Built-in | Actions cache | Built-in |
+| Artifacts | Built-in | Upload action | Built-in |
+| Cost | Free (self-hosted) | Free tier | Free tier |
+
+## Related Actions
+
+- [setup_ci](/actions/setup_ci) - Generic CI setup
+- [match](/actions/match) - Code signing management
+- [is_ci](/actions/is_ci) - Detect CI environment

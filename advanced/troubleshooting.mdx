@@ -1,0 +1,731 @@
+---
+title: Troubleshooting
+description: Common issues, debugging techniques, and solutions for fastlane
+---
+
+This guide covers common issues you might encounter with fastlane and how to resolve them.
+
+## Quick Diagnostics
+
+### Check Your Environment
+
+First, gather diagnostic information:
+
+```bash
+fastlane env
+```
+
+This command generates a comprehensive report including:
+- fastlane version
+- Ruby version
+- Xcode version (macOS)
+- Operating system
+- Installed plugins
+- Environment variables
+
+<Tip>
+Always include the output of `fastlane env` when reporting issues on GitHub.
+</Tip>
+
+### Enable Verbose Logging
+
+Run commands with verbose output to see detailed information:
+
+```bash
+fastlane beta --verbose
+```
+
+Or set the environment variable:
+
+```bash
+VERBOSE=1 fastlane beta
+```
+
+### Check fastlane Status
+
+Verify fastlane and dependencies are up to date:
+
+```bash
+# Check current version
+fastlane --version
+
+# Update fastlane
+bundle update fastlane
+
+# Update plugins
+fastlane update_plugins
+```
+
+## Common Issues
+
+<Accordion title="Authentication Failures">
+
+### Problem
+```
+Invalid username and password combination
+Could not authenticate with Apple
+```
+
+### Solutions
+
+**1. Two-Factor Authentication (2FA)**
+
+If you have 2FA enabled, use one of these methods:
+
+**Option A: Use App Store Connect API (Recommended)**
+
+```ruby
+lane :beta do
+  app_store_connect_api_key(
+    key_id: "ABC123",
+    issuer_id: "xxx-xxx-xxx",
+    key_filepath: "./AuthKey_ABC123.p8"
+  )
+  pilot
+end
+```
+
+**Option B: Use FASTLANE_SESSION**
+
+Generate a session:
+```bash
+fastlane spaceauth -u user@example.com
+```
+
+Copy the output and set it as environment variable:
+```bash
+export FASTLANE_SESSION='---\n- !ruby/object:HTTP::Cookie...'
+```
+
+**Option C: Use Application-Specific Password**
+
+1. Generate at [appleid.apple.com](https://appleid.apple.com)
+2. Set environment variable:
+```bash
+FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD=abcd-efgh-ijkl-mnop
+```
+
+**2. Session Expired**
+
+Regenerate your session:
+```bash
+fastlane spaceauth -u user@example.com
+```
+
+**3. Wrong Team Selected**
+
+Specify team explicitly:
+```bash
+FASTLANE_TEAM_ID=ABC123XYZ fastlane beta
+```
+
+</Accordion>
+
+<Accordion title="Code Signing Issues">
+
+### Problem
+```
+No signing certificate found
+Provisioning profile doesn't match
+Code signing error
+```
+
+### Solutions
+
+**1. Use match (Recommended)**
+
+```ruby
+lane :beta do
+  match(type: "appstore", readonly: true)
+  gym
+end
+```
+
+If certificates are missing:
+```bash
+# Generate new certificates (run once, not on CI)
+fastlane match appstore
+```
+
+**2. Check Certificate Validity**
+
+Verify certificates haven't expired:
+- Open Keychain Access
+- Check certificate expiration dates
+- Regenerate if expired: `fastlane match nuke distribution`
+
+**3. Clean Build**
+
+```bash
+# Clean Xcode derived data
+rm -rf ~/Library/Developer/Xcode/DerivedData
+
+# Clean project
+xcodebuild clean
+```
+
+**4. Reset Codesigning**
+
+```ruby
+lane :beta do
+  update_code_signing_settings(
+    use_automatic_signing: false,
+    path: "MyApp.xcodeproj"
+  )
+  match(type: "appstore")
+  gym
+end
+```
+
+**5. Check Bundle Identifier**
+
+Ensure your app's bundle identifier matches the provisioning profile:
+```ruby
+update_app_identifier(
+  xcodeproj: "MyApp.xcodeproj",
+  plist_path: "MyApp/Info.plist",
+  app_identifier: "com.example.app"
+)
+```
+
+</Accordion>
+
+<Accordion title="Build Failures">
+
+### Problem
+```
+Error building the application
+gym failed with error
+xcodebuild failed
+```
+
+### Solutions
+
+**1. Check Scheme and Configuration**
+
+```ruby
+gym(
+  scheme: "MyApp",
+  configuration: "Release",
+  export_method: "app-store"
+)
+```
+
+**2. Verify Xcode Version**
+
+```bash
+xcode-select --print-path
+xcodebuild -version
+```
+
+Switch Xcode version if needed:
+```bash
+sudo xcode-select --switch /Applications/Xcode.app
+```
+
+**3. Clean and Rebuild**
+
+```ruby
+lane :beta do
+  clean_build_artifacts
+  clear_derived_data
+  gym
+end
+```
+
+**4. Check Build Logs**
+
+Look at detailed build logs:
+```bash
+fastlane gym --verbose
+```
+
+Logs are saved to:
+```
+~/Library/Logs/gym/
+```
+
+**5. Dependency Issues**
+
+```bash
+# CocoaPods
+bundle exec pod install --repo-update
+
+# Carthage
+carthage update --platform iOS
+
+# SPM
+xcodebuild -resolvePackageDependencies
+```
+
+</Accordion>
+
+<Accordion title="Upload Failures">
+
+### Problem
+```
+Failed to upload to App Store Connect
+Could not upload IPA
+Timeout waiting for build processing
+```
+
+### Solutions
+
+**1. Check IPA File**
+
+Verify the IPA was built successfully:
+```bash
+ls -lh *.ipa
+```
+
+**2. Use App Store Connect API**
+
+```ruby
+lane :beta do
+  app_store_connect_api_key(
+    key_id: ENV["ASC_KEY_ID"],
+    issuer_id: ENV["ASC_ISSUER_ID"],
+    key_filepath: "./AuthKey.p8"
+  )
+  
+  pilot(
+    skip_waiting_for_build_processing: true
+  )
+end
+```
+
+**3. Increase Timeout**
+
+```ruby
+pilot(
+  wait_for_uploaded_build: true,
+  wait_processing_timeout_duration: 1800  # 30 minutes
+)
+```
+
+**4. Manual Upload**
+
+If automated upload fails, use Transporter:
+```bash
+xcrun altool --upload-app -f app.ipa \
+  -u user@example.com \
+  -p @keychain:AC_PASSWORD
+```
+
+**5. Check App Store Connect Status**
+
+Verify App Store Connect is operational:
+- [Apple Developer System Status](https://developer.apple.com/system-status/)
+
+If there's an outage, wait and retry later.
+
+</Accordion>
+
+<Accordion title="Plugin Issues">
+
+### Problem
+```
+Plugin not found
+Action not available
+Gem dependency conflicts
+```
+
+### Solutions
+
+**1. Install Dependencies**
+
+```bash
+bundle install
+```
+
+**2. Check Pluginfile**
+
+Verify `fastlane/Pluginfile` exists and lists your plugins:
+```ruby
+gem 'fastlane-plugin-versioning'
+gem 'fastlane-plugin-firebase_app_distribution'
+```
+
+**3. Update Plugins**
+
+```bash
+fastlane update_plugins
+```
+
+**4. Run with Bundle Exec**
+
+Always use `bundle exec` to ensure correct versions:
+```bash
+bundle exec fastlane beta
+```
+
+**5. Clear Bundler Cache**
+
+```bash
+bundle clean --force
+bundle install
+```
+
+**6. Check Plugin Installation**
+
+Verify plugin is loaded:
+```bash
+bundle exec fastlane lanes --verbose
+```
+
+You should see a plugins table listing installed plugins.
+
+</Accordion>
+
+<Accordion title="Environment Variable Issues">
+
+### Problem
+```
+Parameter missing
+Configuration not found
+Environment variable not set
+```
+
+### Solutions
+
+**1. Check .env Files**
+
+Verify `.env` file exists and contains required variables:
+```bash
+cat fastlane/.env
+```
+
+**2. Verify File Location**
+
+`.env` files should be in:
+- `fastlane/.env` (preferred)
+- `../.env` (project root)
+
+**3. Load Specific Environment**
+
+```bash
+fastlane beta --env production
+```
+
+**4. Check Variable Names**
+
+Ensure correct environment variable names:
+```bash
+# List all fastlane-related variables
+env | grep FASTLANE
+env | grep FL_
+```
+
+**5. Quote Values with Spaces**
+
+In `.env` files:
+```bash
+APP_NAME="My App Name"
+NOT_THIS=My App Name  # This won't work
+```
+
+</Accordion>
+
+<Accordion title="Permission Errors">
+
+### Problem
+```
+Permission denied
+Operation not permitted
+Access denied
+```
+
+### Solutions
+
+**1. Keychain Access**
+
+Unlock keychain before running:
+```ruby
+lane :beta do
+  unlock_keychain(
+    path: "login.keychain",
+    password: ENV["KEYCHAIN_PASSWORD"]
+  )
+  match
+  gym
+end
+```
+
+**2. File Permissions**
+
+```bash
+chmod +x fastlane/Fastfile
+chmod 600 .env  # Secure permissions for credentials
+```
+
+**3. CI Keychain**
+
+Create temporary keychain on CI:
+```ruby
+lane :beta do
+  create_keychain(
+    name: "temp.keychain",
+    password: ENV["KEYCHAIN_PASSWORD"],
+    default_keychain: true,
+    unlock: true,
+    timeout: 3600,
+    lock_when_sleeps: false
+  )
+  
+  match(
+    keychain_name: "temp.keychain",
+    keychain_password: ENV["KEYCHAIN_PASSWORD"]
+  )
+end
+```
+
+</Accordion>
+
+<Accordion title="Ruby/Gem Version Issues">
+
+### Problem
+```
+Gem version mismatch
+Bundler version conflict
+Ruby version too old
+```
+
+### Solutions
+
+**1. Check Ruby Version**
+
+```bash
+ruby --version
+```
+
+fastlane requires Ruby 2.5 or later. Update if needed:
+```bash
+# Using rbenv
+rbenv install 3.1.0
+rbenv global 3.1.0
+
+# Using rvm
+rvm install 3.1.0
+rvm use 3.1.0 --default
+```
+
+**2. Update Bundler**
+
+```bash
+gem install bundler
+bundle update --bundler
+```
+
+**3. Clean Gemfile.lock**
+
+```bash
+rm Gemfile.lock
+bundle install
+```
+
+**4. Use Specific Versions**
+
+Pin versions in `Gemfile`:
+```ruby
+source "https://rubygems.org"
+
+gem "fastlane", "~> 2.200.0"
+```
+
+</Accordion>
+
+## Debugging Techniques
+
+### Add Breakpoints with pry
+
+Add to your Fastfile for interactive debugging:
+
+```ruby
+lane :debug do
+  require 'pry'
+  
+  result = gym
+  binding.pry  # Execution pauses here
+  
+  pilot
+end
+```
+
+Run with:
+```bash
+bundle exec fastlane debug
+```
+
+### Inspect Lane Context
+
+Check shared values between actions:
+
+```ruby
+lane :debug do
+  gym
+  
+  # Print all shared values
+  puts Actions.lane_context.keys
+  puts Actions.lane_context[SharedValues::IPA_OUTPUT_PATH]
+  
+  pilot
+end
+```
+
+### Dry Run Mode
+
+Create a dry run option to test without side effects:
+
+```ruby
+lane :deploy do |options|
+  if options[:dry_run]
+    UI.important("🔍 DRY RUN MODE - No uploads will be performed")
+  end
+  
+  gym
+  
+  unless options[:dry_run]
+    pilot
+  end
+end
+```
+
+Run with:
+```bash
+fastlane deploy dry_run:true
+```
+
+### Debug HTTP Requests (Spaceship)
+
+Enable debug mode for Apple API calls:
+
+```bash
+SPACESHIP_DEBUG=1 fastlane beta
+```
+
+Use with Charles Proxy or mitmproxy:
+```bash
+SPACESHIP_DEBUG=1 SPACESHIP_PROXY=http://localhost:8888 fastlane beta
+```
+
+### Test Actions Individually
+
+Test single actions using `fastlane run`:
+
+```bash
+fastlane run pilot username:user@example.com skip_submission:true
+```
+
+### Check Action Documentation
+
+View detailed action documentation:
+
+```bash
+fastlane action gym
+fastlane action pilot
+fastlane action match
+```
+
+## Getting Help
+
+### Search Existing Issues
+
+Before creating a new issue:
+1. Search [GitHub Issues](https://github.com/fastlane/fastlane/issues)
+2. Check [docs.fastlane.tools](https://docs.fastlane.tools)
+3. Look for similar problems on [Stack Overflow](https://stackoverflow.com/questions/tagged/fastlane)
+
+### Report a Bug
+
+When reporting issues on GitHub:
+
+1. **Run diagnostic command:**
+```bash
+fastlane env > fastlane-env.txt
+```
+
+2. **Capture full output:**
+```bash
+fastlane beta --verbose --capture_output 2>&1 | tee output.txt
+```
+
+3. **Include in issue:**
+   - Clear description of the problem
+   - Expected vs actual behavior
+   - Steps to reproduce
+   - Output from `fastlane env`
+   - Full error output
+   - Relevant Fastfile content
+
+<Warning>
+Before sharing output, remove sensitive information like:
+- API keys
+- Passwords
+- Team IDs
+- Bundle identifiers (if private)
+</Warning>
+
+### Community Support
+
+- **GitHub Discussions**: Ask questions and share tips
+- **Stack Overflow**: Tag questions with `fastlane`
+- **Twitter**: Follow [@FastlaneTools](https://twitter.com/FastlaneTools)
+
+## Prevention Tips
+
+### Use Version Control
+
+Commit your fastlane configuration:
+```bash
+git add Fastfile Gemfile Gemfile.lock Pluginfile
+git commit -m "Update fastlane configuration"
+```
+
+### Pin Dependencies
+
+Avoid surprises with specific versions:
+```ruby
+# Gemfile
+gem "fastlane", "~> 2.200.0"  # Minor updates only
+```
+
+### Regular Updates
+
+Keep fastlane updated, but test changes:
+```bash
+# Update in development first
+bundle update fastlane
+fastlane test
+
+# Then commit and deploy to CI
+git add Gemfile.lock
+git commit -m "Update fastlane to 2.200.0"
+```
+
+### CI Best Practices
+
+- Lock keychain access
+- Use readonly match mode
+- Set appropriate timeouts
+- Clean workspace between builds
+- Cache dependencies when possible
+
+### Monitoring
+
+Set up notifications for failures:
+
+```ruby
+error do |lane, exception|
+  slack(
+    message: "Lane #{lane} failed!",
+    success: false,
+    payload: {
+      "Error" => exception.message
+    }
+  )
+end
+```
+
+<Tip>
+Run `fastlane lanes` to see all available lanes and their descriptions. Add the `--verbose` flag to see loaded plugins and configuration.
+</Tip>

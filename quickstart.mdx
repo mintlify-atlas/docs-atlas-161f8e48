@@ -1,80 +1,247 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Set up fastlane for your project and run your first lane"
 ---
 
 ## Get started in three steps
 
-Get your documentation site running locally and make your first customization.
+This guide will help you set up fastlane for your iOS or Android project and run your first automated lane.
 
-### Step 1: Set up your local environment
+<Note>
+  Make sure you've [installed fastlane](/installation) before continuing.
+</Note>
+
+### Step 1: Initialize fastlane
+
+Navigate to your project directory and run the setup command:
+
+<CodeGroup>
+
+```bash iOS
+cd your-ios-project
+fastlane init
+```
+
+```bash Android
+cd your-android-project
+fastlane init
+```
+
+```bash With Bundler
+cd your-project
+bundle exec fastlane init
+```
+
+</CodeGroup>
+
+fastlane will ask you what you want to automate. Choose from:
+
+1. **Automate screenshots** - Set up snapshot to capture screenshots
+2. **Automate beta distribution** - Set up TestFlight or Google Play beta deployment
+3. **Automate App Store distribution** - Set up automatic releases
+4. **Manual setup** - Create a basic Fastfile to customize yourself
+
+<Tip>
+  If you're not sure, choose **Manual setup** to start with a basic configuration you can customize later.
+</Tip>
+
+### Step 2: Explore your Fastfile
+
+After initialization, fastlane creates a `fastlane` directory with:
+
+- **Fastfile** - Contains your lanes (automation workflows)
+- **Appfile** - Stores app identifier and Apple ID (iOS) or package name (Android)
+
+Open `fastlane/Fastfile` to see your lanes. Here's an example iOS Fastfile:
+
+```ruby fastlane/Fastfile
+default_platform(:ios)
+
+platform :ios do
+  desc "Run tests"
+  lane :test do
+    scan
+  end
+
+  desc "Build app"
+  lane :build do
+    gym
+  end
+
+  desc "Deploy to TestFlight"
+  lane :beta do
+    build_app
+    upload_to_testflight
+  end
+end
+```
+
+Each `lane` is an automation workflow you can run. The `desc` describes what the lane does.
+
+### Step 3: Run your first lane
+
+Run a lane to see fastlane in action:
+
+<CodeGroup>
+
+```bash Run a specific lane
+fastlane test
+```
+
+```bash With Bundler
+bundle exec fastlane test
+```
+
+```bash Specify platform
+fastlane ios test
+```
+
+</CodeGroup>
+
+fastlane will execute all actions in that lane sequentially.
+
+<Tip>
+  Run `fastlane lanes` to see all available lanes in your Fastfile.
+</Tip>
+
+## Common lanes to add
+
+Here are some useful lanes to add to your Fastfile:
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
+  <Accordion title="iOS: Deploy to TestFlight" icon="plane">
+    ```ruby fastlane/Fastfile
+    lane :beta do
+      increment_build_number
+      build_app
+      upload_to_testflight
+    end
+    ```
+
+    Run with: `fastlane beta`
   </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+
+  <Accordion title="iOS: Deploy to App Store" icon="app-store-ios">
+    ```ruby fastlane/Fastfile
+    lane :release do
+      capture_screenshots
+      build_app
+      upload_to_app_store
+    end
+    ```
+
+    Run with: `fastlane release`
+  </Accordion>
+
+  <Accordion title="Android: Deploy to Google Play beta" icon="google-play">
+    ```ruby fastlane/Fastfile
+    lane :beta do
+      gradle(task: "assemble", build_type: "Release")
+      upload_to_play_store(track: "beta")
+    end
+    ```
+
+    Run with: `fastlane beta`
+  </Accordion>
+
+  <Accordion title="Run tests and generate coverage" icon="magnifying-glass">
+    ```ruby fastlane/Fastfile
+    lane :test do
+      scan(
+        scheme: "YourApp",
+        code_coverage: true
+      )
+    end
+    ```
+
+    Run with: `fastlane test`
   </Accordion>
 </AccordionGroup>
 
-### Step 2: Deploy your changes
+## Using environment variables
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+Store sensitive data like API keys in a `.env` file instead of hardcoding them:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+```bash fastlane/.env
+APP_IDENTIFIER=com.example.app
+APPLE_ID=your@email.com
+```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Access them in your Fastfile:
 
-### Step 3: Go live
+```ruby fastlane/Fastfile
+lane :deploy do
+  app_identifier = ENV["APP_IDENTIFIER"]
+  # your code here
+end
+```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+<Warning>
+  Add `.env` to your `.gitignore` to avoid committing sensitive credentials.
+</Warning>
+
+## Using with CI/CD
+
+fastlane works seamlessly with continuous integration services:
+
+<CodeGroup>
+
+```yaml GitHub Actions
+name: Deploy
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2
+          bundler-cache: true
+      - name: Run fastlane
+        run: bundle exec fastlane beta
+```
+
+```yaml CircleCI
+version: 2.1
+jobs:
+  deploy:
+    macos:
+      xcode: 15.0.0
+    steps:
+      - checkout
+      - run: bundle install
+      - run: bundle exec fastlane beta
+```
+
+</CodeGroup>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
+Now that you have fastlane running, explore these features:
 
 <CardGroup cols={2}>
+  <Card title="Actions" icon="bolt" href="/actions">
+    Learn about the 200+ built-in actions you can use in your lanes.
+  </Card>
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+  <Card title="Code signing" icon="shield" href="/code-signing">
+    Set up match to sync code signing across your team.
+  </Card>
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+  <Card title="Screenshots" icon="camera" href="/screenshots">
+    Automate screenshot generation for all devices and languages.
+  </Card>
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Plugins" icon="puzzle-piece" href="/plugins">
+    Extend fastlane with community plugins or create your own.
+  </Card>
 </CardGroup>
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Need help? Check out the [fastlane documentation](https://docs.fastlane.tools) or search for [existing issues](https://github.com/fastlane/fastlane/issues) on GitHub.
 </Note>

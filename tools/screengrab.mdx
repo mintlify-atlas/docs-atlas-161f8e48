@@ -1,0 +1,383 @@
+---
+title: screengrab
+description: Automate taking localized screenshots of your Android app on emulators or real devices
+---
+
+## Overview
+
+screengrab automates the process of taking localized screenshots for your Android app on emulators or real devices. It uses Espresso tests to navigate through your app and capture screenshots in all required languages and device types.
+
+<Info>
+screengrab is the Android equivalent of [snapshot](/tools/snapshot) for iOS.
+</Info>
+
+## Installation
+
+screengrab is part of fastlane. Install it with:
+
+```bash
+fastlane screengrab
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Initialize screengrab">
+    Create a new Screengrabfile in your project directory:
+    
+    ```bash
+    fastlane screengrab init
+    ```
+  </Step>
+  
+  <Step title="Add dependencies to your project">
+    Add the screengrab dependency to your `build.gradle`:
+    
+    ```gradle
+androidTestImplementation 'tools.fastlane:screengrab:2.1.1'
+    ```
+  </Step>
+  
+  <Step title="Configure your Espresso tests">
+    In your Espresso tests, call `Screengrab.screenshot("name")` to capture screenshots:
+    
+    ```java
+import tools.fastlane.screengrab.Screengrab;
+import tools.fastlane.screengrab.locale.LocaleTestRule;
+
+@Rule
+public LocaleTestRule localeTestRule = new LocaleTestRule();
+
+@Test
+public void testTakeScreenshot() {
+    Screengrab.screenshot("main_screen");
+}
+    ```
+  </Step>
+  
+  <Step title="Run screengrab">
+    ```bash
+    fastlane screengrab
+    ```
+  </Step>
+</Steps>
+
+## Configuration
+
+Configure screengrab in your `Screengrabfile`:
+
+```ruby
+app_package_name('com.example.myapp')
+
+locales(['en-US', 'de-DE', 'es-ES', 'fr-FR'])
+
+device_type('phone')
+
+app_apk_path('app/build/outputs/apk/debug/app-debug.apk')
+tests_apk_path('app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk')
+
+clear_previous_screenshots(true)
+```
+
+## Key Options
+
+<ParamField path="app_package_name" type="string" required>
+  The package name of the app under test (e.g. com.yourcompany.yourapp).
+  
+  ```ruby
+  app_package_name('com.example.myapp')
+  ```
+</ParamField>
+
+<ParamField path="locales" type="array" default="['en-US']">
+  List of locales to generate screenshots for.
+  
+  ```ruby
+  locales(['en-US', 'de-DE', 'es-ES'])
+  ```
+</ParamField>
+
+<ParamField path="device_type" type="string" default="phone">
+  Type of device used for screenshots. Options: `phone`, `sevenInch`, `tenInch`, `tv`, `wear`.
+  
+  ```ruby
+  device_type('phone')
+  ```
+</ParamField>
+
+<ParamField path="app_apk_path" type="string">
+  Path to the APK for the app under test.
+  
+  ```ruby
+  app_apk_path('app/build/outputs/apk/debug/app-debug.apk')
+  ```
+</ParamField>
+
+<ParamField path="tests_apk_path" type="string">
+  Path to the APK for the tests bundle.
+  
+  ```ruby
+  tests_apk_path('app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk')
+  ```
+</ParamField>
+
+<ParamField path="output_directory" type="string" default="fastlane/metadata/android">
+  Directory where screenshots will be stored.
+  
+  ```ruby
+  output_directory('./screenshots')
+  ```
+</ParamField>
+
+<ParamField path="clear_previous_screenshots" type="boolean" default="false">
+  Automatically clear previously generated screenshots.
+  
+  ```ruby
+  clear_previous_screenshots(true)
+  ```
+</ParamField>
+
+<ParamField path="test_instrumentation_runner" type="string" default="androidx.test.runner.AndroidJUnitRunner">
+  The fully qualified class name of your test instrumentation runner.
+  
+  ```ruby
+  test_instrumentation_runner('androidx.test.runner.AndroidJUnitRunner')
+  ```
+</ParamField>
+
+<ParamField path="specific_device" type="string">
+  Use the device or emulator with the given serial number or qualifier.
+  
+  ```ruby
+  specific_device('emulator-5554')
+  ```
+</ParamField>
+
+<ParamField path="reinstall_app" type="boolean" default="false">
+  Automatically uninstall the application before running.
+  
+  ```ruby
+  reinstall_app(true)
+  ```
+</ParamField>
+
+<ParamField path="use_tests_in_packages" type="array">
+  Only run tests in these Java packages.
+  
+  ```ruby
+  use_tests_in_packages(['com.example.myapp.tests'])
+  ```
+</ParamField>
+
+<ParamField path="use_tests_in_classes" type="array">
+  Only run tests in these Java classes.
+  
+  ```ruby
+  use_tests_in_classes(['com.example.myapp.tests.LoginTest'])
+  ```
+</ParamField>
+
+<ParamField path="launch_arguments" type="array">
+  Additional launch arguments for the app.
+  
+  ```ruby
+  launch_arguments(['-e', 'testMode', 'true'])
+  ```
+</ParamField>
+
+<ParamField path="exit_on_test_failure" type="boolean" default="true">
+  Whether to exit screengrab on test failure.
+  
+  ```ruby
+  exit_on_test_failure(false)
+  ```
+</ParamField>
+
+<ParamField path="use_timestamp_suffix" type="boolean" default="true">
+  Add timestamp suffix to screenshot filename.
+  
+  ```ruby
+  use_timestamp_suffix(false)
+  ```
+</ParamField>
+
+## CLI Commands
+
+<CodeGroup>
+
+```bash Run screengrab
+fastlane screengrab
+```
+
+```bash Initialize
+fastlane screengrab init
+```
+
+</CodeGroup>
+
+## Espresso Integration
+
+### Java Example
+
+```java
+import tools.fastlane.screengrab.Screengrab;
+import tools.fastlane.screengrab.locale.LocaleTestRule;
+import tools.fastlane.screengrab.cleanstatusbar.CleanStatusBar;
+
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.rule.ActivityTestRule;
+
+@RunWith(AndroidJUnit4.class)
+public class MainActivityTest {
+    @ClassRule
+    public static final LocaleTestRule localeTestRule = new LocaleTestRule();
+
+    @Rule
+    public ActivityTestRule<MainActivity> activityRule = 
+        new ActivityTestRule<>(MainActivity.class);
+
+    @Test
+    public void testTakeScreenshots() {
+        Screengrab.screenshot("main_screen");
+        
+        // Navigate to another screen
+        onView(withId(R.id.button_settings)).perform(click());
+        Screengrab.screenshot("settings_screen");
+    }
+}
+```
+
+### Kotlin Example
+
+```kotlin
+import tools.fastlane.screengrab.Screengrab
+import tools.fastlane.screengrab.locale.LocaleTestRule
+import tools.fastlane.screengrab.cleanstatusbar.CleanStatusBar
+
+import org.junit.ClassRule
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.rule.ActivityTestRule
+
+@RunWith(AndroidJUnit4::class)
+class MainActivityTest {
+    companion object {
+        @get:ClassRule
+        val localeTestRule = LocaleTestRule()
+    }
+
+    @get:Rule
+    val activityRule = ActivityTestRule(MainActivity::class.java)
+
+    @Test
+    fun testTakeScreenshots() {
+        Screengrab.screenshot("main_screen")
+        
+        // Navigate to another screen
+        onView(withId(R.id.button_settings)).perform(click())
+        Screengrab.screenshot("settings_screen")
+    }
+}
+```
+
+## Using with fastlane
+
+```ruby
+lane :screenshots do
+  screengrab
+end
+```
+
+With custom parameters:
+
+```ruby
+lane :screenshots do
+  screengrab(
+    app_package_name: 'com.example.myapp',
+    locales: ['en-US', 'de-DE'],
+    device_type: 'phone',
+    clear_previous_screenshots: true
+  )
+end
+```
+
+## Environment Variables
+
+<ResponseField name="SCREENGRAB_APP_PACKAGE_NAME" type="string">
+  The package name of the app under test
+</ResponseField>
+
+<ResponseField name="SCREENGRAB_OUTPUT_DIRECTORY" type="string">
+  Directory for storing screenshots
+</ResponseField>
+
+<ResponseField name="SCREENGRAB_CLEAR_PREVIOUS_SCREENSHOTS" type="boolean">
+  Clear previous screenshots before running
+</ResponseField>
+
+<ResponseField name="ANDROID_HOME" type="string">
+  Path to your Android SDK installation
+</ResponseField>
+
+<ResponseField name="SCREENGRAB_SPECIFIC_DEVICE" type="string">
+  Device serial number or qualifier to use
+</ResponseField>
+
+## Tips & Best Practices
+
+<Tip>
+**Build your APKs first**: Make sure to build both your app and test APKs before running screengrab.
+</Tip>
+
+<Warning>
+**Use debug builds**: screengrab works best with debug builds that have testing enabled.
+</Warning>
+
+<Tip>
+**Clean status bar**: The `CleanStatusBar` rule helps clean up the status bar for screenshots.
+</Tip>
+
+<Check>
+**Test your Espresso tests first**: Verify your tests run successfully before using screengrab.
+</Check>
+
+## Troubleshooting
+
+### No connected devices
+
+Make sure you have a device connected or an emulator running:
+
+```bash
+adb devices
+```
+
+### APK not found
+
+Build your APKs before running screengrab:
+
+```bash
+./gradlew assembleDebug assembleAndroidTest
+```
+
+### Permission issues
+
+Make sure your test manifest includes necessary permissions:
+
+```xml
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+```
+
+## Related Tools
+
+- [snapshot](/tools/snapshot) - iOS screenshot automation
+- [frameit](/tools/frameit) - Add device frames to screenshots
+- [supply](/tools/supply) - Upload screenshots to Google Play

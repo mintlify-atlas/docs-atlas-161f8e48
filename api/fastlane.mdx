@@ -1,0 +1,218 @@
+---
+title: "Fastlane Module"
+description: "Main Fastlane module API reference"
+---
+
+The `Fastlane` module is the main namespace for all fastlane functionality. It provides access to core constants, helper methods, and module-level functions.
+
+## Module Constants
+
+### VERSION
+
+The current version of fastlane.
+
+```ruby
+Fastlane::VERSION
+# => "2.232.2"
+```
+
+<ResponseField name="VERSION" type="String">
+  Current fastlane version number in semver format
+</ResponseField>
+
+### SUMMARY
+
+A brief description of fastlane.
+
+```ruby
+Fastlane::SUMMARY
+# => "The easiest way to build and release mobile apps."
+```
+
+<ResponseField name="SUMMARY" type="String">
+  Short summary of what fastlane does
+</ResponseField>
+
+### DESCRIPTION
+
+A detailed description of fastlane's purpose.
+
+```ruby
+Fastlane::DESCRIPTION
+# => "The easiest way to automate beta deployments and releases for your iOS and Android apps"
+```
+
+<ResponseField name="DESCRIPTION" type="String">
+  Extended description of fastlane's capabilities
+</ResponseField>
+
+### MINIMUM_XCODE_RELEASE
+
+The minimum required Xcode version.
+
+```ruby
+Fastlane::MINIMUM_XCODE_RELEASE
+# => "7.0"
+```
+
+<ResponseField name="MINIMUM_XCODE_RELEASE" type="String">
+  Minimum Xcode version required to run fastlane
+</ResponseField>
+
+### TOOLS
+
+Array of all fastlane tools.
+
+```ruby
+Fastlane::TOOLS
+# => [:fastlane, :pilot, :spaceship, :produce, :deliver, :frameit, :pem, 
+#     :snapshot, :screengrab, :supply, :cert, :sigh, :match, :scan, :gym, 
+#     :precheck, :trainer]
+```
+
+<ResponseField name="TOOLS" type="Array<Symbol>">
+  List of all fastlane tool names as symbols
+</ResponseField>
+
+The tools included are:
+
+- `:fastlane` - Main automation tool
+- `:pilot` - TestFlight management
+- `:spaceship` - Apple Developer Portal API client
+- `:produce` - Create apps on Apple Developer Portal and App Store Connect
+- `:deliver` - Upload screenshots, metadata, and binaries to App Store Connect
+- `:frameit` - Add device frames to screenshots
+- `:pem` - Manage push notification certificates
+- `:snapshot` - Automate taking screenshots
+- `:screengrab` - Android screenshot automation
+- `:supply` - Upload to Google Play Store
+- `:cert` - Certificate management
+- `:sigh` - Provisioning profile management
+- `:match` - Sync code signing across team
+- `:scan` - Run tests
+- `:gym` - Build and package apps
+- `:precheck` - Check app metadata before submission
+- `:trainer` - Convert test results to JUnit format
+
+### TOOL_ALIASES
+
+Mapping of action aliases to their primary tool names.
+
+```ruby
+Fastlane::TOOL_ALIASES
+# => {
+#   "get_certificates": "cert",
+#   "upload_to_app_store": "deliver",
+#   "frame_screenshots": "frameit",
+#   "build_app": "gym",
+#   "build_ios_app": "gym",
+#   "build_mac_app": "gym",
+#   "sync_code_signing": "match",
+#   "get_push_certificate": "pem",
+#   "check_app_store_metadata": "precheck",
+#   "capture_android_screenshots": "screengrab",
+#   "get_provisioning_profile": "sigh",
+#   "capture_ios_screenshots": "snapshot",
+#   "upload_to_play_store": "supply"
+# }
+```
+
+<ResponseField name="TOOL_ALIASES" type="Hash">
+  Map of action names to their corresponding tools
+</ResponseField>
+
+## Module Methods
+
+### load_actions
+
+Loads all default fastlane actions and any custom actions from the project.
+
+```ruby
+Fastlane.load_actions
+```
+
+This method:
+1. Loads all built-in fastlane actions
+2. Loads helper methods
+3. Loads external custom actions from `fastlane/actions/` directory if it exists
+
+### plugin_manager
+
+Returns the plugin manager instance for managing fastlane plugins.
+
+```ruby
+plugin_manager = Fastlane.plugin_manager
+```
+
+<ResponseField name="plugin_manager" type="Fastlane::PluginManager">
+  Singleton instance of the plugin manager
+</ResponseField>
+
+### external_actions
+
+Returns array of loaded external (custom) actions.
+
+```ruby
+Fastlane.external_actions
+# => ["my_custom_action", "another_action"]
+```
+
+<ResponseField name="external_actions" type="Array<String>">
+  List of custom action names loaded from the project's actions directory
+</ResponseField>
+
+## Helper Aliases
+
+### Helper
+
+Alias to `FastlaneCore::Helper` for convenient access to helper methods.
+
+```ruby
+Fastlane::Helper.is_mac?
+Fastlane::Helper.is_ci?
+```
+
+### UI
+
+Alias to `FastlaneCore::UI` for user interface methods.
+
+```ruby
+Fastlane::UI.message("Hello")
+Fastlane::UI.success("Done!")
+Fastlane::UI.error("Something went wrong")
+Fastlane::UI.user_error!("Invalid input")
+```
+
+### ROOT
+
+Pathname to the fastlane gem root directory.
+
+```ruby
+Fastlane::ROOT
+# => #<Pathname:/path/to/fastlane/gem>
+```
+
+## Example Usage
+
+### Checking Version
+
+```ruby
+if Gem::Version.new(Fastlane::VERSION) >= Gem::Version.new('2.200.0')
+  puts "Using modern fastlane"
+end
+```
+
+### Loading Custom Actions
+
+```ruby
+Fastlane.load_actions
+puts "Loaded #{Fastlane.external_actions&.count || 0} custom actions"
+```
+
+### Accessing Tools
+
+```ruby
+Fastlane::TOOLS.each do |tool|
+  puts "Available tool: #{tool}"
+end
+```

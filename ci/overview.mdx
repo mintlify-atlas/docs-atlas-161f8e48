@@ -1,0 +1,339 @@
+---
+title: CI/CD Overview
+description: Integrate fastlane into your continuous integration and deployment workflow
+---
+
+## Why Use fastlane in CI/CD?
+
+Integrating fastlane into your CI/CD pipeline automates your entire build, test, and deployment process. Instead of manually running commands on your local machine, fastlane runs on your CI server, ensuring consistent builds and faster delivery.
+
+**Benefits:**
+
+- **Consistency**: Same build process across all environments
+- **Automation**: Automatic builds, tests, and deployments on every commit
+- **Speed**: Parallel builds and faster iteration cycles
+- **Reliability**: Catch issues early with automated testing
+- **Security**: Keep certificates and provisioning profiles secure
+
+## Common CI/CD Patterns
+
+### Basic Workflow
+
+A typical fastlane CI workflow includes:
+
+<Steps>
+  <Step title="Setup CI Environment">
+    Configure keychain, certificates, and environment variables
+    
+    ```ruby
+    setup_ci
+    ```
+  </Step>
+  
+  <Step title="Run Tests">
+    Execute your test suite
+    
+    ```ruby
+    run_tests(scheme: "MyApp")
+    ```
+  </Step>
+  
+  <Step title="Build">
+    Create your app binary
+    
+    ```ruby
+    build_app(scheme: "MyApp")
+    ```
+  </Step>
+  
+  <Step title="Deploy">
+    Upload to TestFlight, App Store, or distribution service
+    
+    ```ruby
+    upload_to_testflight
+    ```
+  </Step>
+</Steps>
+
+### Branch-Based Workflows
+
+Different branches can trigger different lanes:
+
+```ruby
+platform :ios do
+  before_all do
+    setup_ci
+  end
+
+  lane :ci do
+    if ENV['BRANCH_NAME'] == 'main'
+      release
+    elsif ENV['BRANCH_NAME'] =~ /^release\//
+      beta
+    else
+      test
+    end
+  end
+
+  lane :test do
+    run_tests(scheme: "MyApp")
+  end
+
+  lane :beta do
+    build_app(scheme: "MyApp")
+    upload_to_testflight
+  end
+
+  lane :release do
+    build_app(scheme: "MyApp")
+    upload_to_app_store
+  end
+end
+```
+
+## Environment Variables
+
+fastlane automatically detects CI environments by checking for specific environment variables:
+
+| Environment Variable | CI Provider |
+|---------------------|-------------|
+| `CIRCLECI` | CircleCI |
+| `JENKINS_HOME`, `JENKINS_URL` | Jenkins |
+| `TRAVIS` | Travis CI |
+| `GITHUB_ACTION`, `GITHUB_ACTIONS` | GitHub Actions |
+| `GITLAB_CI` | GitLab CI |
+| `TEAMCITY_VERSION` | TeamCity |
+| `TF_BUILD` | Azure DevOps |
+| `BITRISE_IO` | Bitrise |
+| `CODEBUILD_BUILD_ARN` | AWS CodeBuild |
+| `CI` | Generic CI indicator |
+
+### Important Environment Variables
+
+**Output Paths:**
+
+```bash
+# Set output directory for build artifacts
+FL_OUTPUT_DIR=./output
+
+# Scan (test) output directory
+SCAN_OUTPUT_DIRECTORY=./output/scan
+
+# Gym (build) output directory
+GYM_OUTPUT_DIRECTORY=./output/gym
+
+# Build logs path
+FL_BUILDLOG_PATH=./output/buildlogs
+```
+
+**Match (Code Signing):**
+
+```bash
+# Keychain name for match
+MATCH_KEYCHAIN_NAME=fastlane_tmp_keychain
+
+# Keychain password
+MATCH_KEYCHAIN_PASSWORD=""
+
+# Set match to readonly mode (don't create new certificates)
+MATCH_READONLY=true
+
+# Match git repository
+MATCH_GIT_URL=https://github.com/your-org/certificates
+
+# Match password (encrypted storage)
+MATCH_PASSWORD=your_password
+```
+
+**Authentication:**
+
+```bash
+# App Store Connect API Key (recommended)
+APP_STORE_CONNECT_API_KEY_KEY_ID=ABC123
+APP_STORE_CONNECT_API_KEY_ISSUER_ID=xyz-123-abc
+APP_STORE_CONNECT_API_KEY_KEY=your_key_content
+
+# Or use Apple ID (legacy)
+FASTLANE_USER=your@email.com
+FASTLANE_PASSWORD=your_password
+FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD=app_password
+```
+
+## Best Practices for CI
+
+### 1. Use setup_ci Action
+
+Always add `setup_ci` at the beginning of your Fastfile when running on CI:
+
+```ruby
+platform :ios do
+  before_all do
+    setup_ci if is_ci
+  end
+end
+```
+
+### 2. Keep Secrets Secure
+
+- Never commit credentials to your repository
+- Use your CI provider's secret management
+- Use App Store Connect API Keys instead of Apple ID credentials
+- Encrypt match repository with a strong password
+
+### 3. Cache Dependencies
+
+Cache these directories to speed up builds:
+
+- Ruby gems: `vendor/bundle`
+- CocoaPods: `Pods/`, `~/.cocoapods`
+- Carthage: `Carthage/`
+- Derived data (between test runs)
+
+### 4. Optimize Build Times
+
+```ruby
+# Skip unnecessary steps
+skip_docs
+
+# Run tests on specific devices only
+run_tests(
+  scheme: "MyApp",
+  devices: ["iPhone 15"]
+)
+
+# Disable code coverage if not needed
+run_tests(
+  scheme: "MyApp",
+  code_coverage: false
+)
+```
+
+### 5. Handle Timeouts
+
+```ruby
+# Set custom keychain timeout (0 = no timeout)
+setup_ci(timeout: 0)
+
+# Increase test timeout for slow tests
+run_tests(
+  scheme: "MyApp",
+  test_timeout: 600
+)
+```
+
+### 6. Clean Up After Builds
+
+```ruby
+after_all do |lane|
+  # Clean up derived data
+  clear_derived_data if is_ci
+end
+
+error do |lane, exception|
+  # Clean up on error
+  clear_derived_data if is_ci
+end
+```
+
+## The setup_ci Action
+
+The `setup_ci` action automatically configures fastlane for CI environments. It handles keychain creation, match configuration, and output paths.
+
+### What it Does
+
+<Steps>
+  <Step title="Detects CI Environment">
+    Automatically identifies if running on CircleCI, CodeBuild, or other CI systems
+  </Step>
+  
+  <Step title="Creates Temporary Keychain">
+    Sets up a temporary keychain for code signing (macOS only)
+    
+    - Creates keychain: `fastlane_tmp_keychain`
+    - Sets as default keychain
+    - Unlocks keychain with empty password
+  </Step>
+  
+  <Step title="Configures Match">
+    Sets match to readonly mode to prevent certificate creation on CI
+    
+    - Sets `MATCH_KEYCHAIN_NAME`
+    - Sets `MATCH_READONLY=true`
+  </Step>
+  
+  <Step title="Sets Output Paths">
+    Configures output directories for logs and artifacts (CircleCI/CodeBuild)
+  </Step>
+</Steps>
+
+### Usage
+
+```ruby
+# Basic usage (auto-detects provider)
+setup_ci
+
+# Specify provider explicitly
+setup_ci(provider: "circleci")
+
+# Custom keychain timeout (0 = no timeout)
+setup_ci(
+  provider: "circleci",
+  timeout: 0
+)
+
+# Custom keychain name
+setup_ci(
+  provider: "circleci",
+  timeout: 0,
+  keychain_name: "my_custom_keychain"
+)
+
+# Force setup even when not on CI (for testing)
+setup_ci(force: true)
+```
+
+### Parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|----------|
+| `provider` | CI provider (`circleci`, `travis`, etc.) | Auto-detected |
+| `force` | Force setup even if not on CI | `false` |
+| `timeout` | Keychain timeout in seconds (0 = no timeout) | `3600` |
+| `keychain_name` | Custom keychain name | `fastlane_tmp_keychain` |
+
+### Example Fastfile
+
+```ruby
+platform :ios do
+  before_all do
+    setup_ci if is_ci
+  end
+
+  lane :test do
+    run_tests(scheme: "MyApp")
+  end
+
+  lane :beta do
+    match(type: "appstore", readonly: true)
+    build_app(scheme: "MyApp")
+    upload_to_testflight
+  end
+end
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Jenkins" icon="jenkins" href="/ci/jenkins">
+    Set up fastlane on Jenkins
+  </Card>
+  <Card title="CircleCI" icon="circle" href="/ci/circleci">
+    Set up fastlane on CircleCI
+  </Card>
+  <Card title="GitHub Actions" icon="github" href="/ci/github-actions">
+    Set up fastlane with GitHub Actions
+  </Card>
+  <Card title="GitLab CI" icon="gitlab" href="/ci/gitlab-ci">
+    Set up fastlane on GitLab CI
+  </Card>
+</CardGroup>

@@ -1,122 +1,121 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "fastlane",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#0066FF",
+    "light": "#4D94FF",
+    "dark": "#003D99"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/fastlane/fastlane"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/fastlane/fastlane"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "concepts/fastfile",
+              "concepts/lanes",
+              "concepts/actions",
+              "concepts/plugins"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Tools",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "tools/overview",
+              "tools/deliver",
+              "tools/supply",
+              "tools/gym",
+              "tools/scan",
+              "tools/match",
+              "tools/snapshot",
+              "tools/screengrab",
+              "tools/frameit",
+              "tools/pilot",
+              "tools/cert",
+              "tools/sigh",
+              "tools/pem",
+              "tools/produce",
+              "tools/precheck",
+              "tools/spaceship"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Actions",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "actions/overview",
+              "actions/app-store",
+              "actions/testing",
+              "actions/building",
+              "actions/code-signing",
+              "actions/versioning",
+              "actions/project-management",
+              "actions/notifications"
+            ]
+          },
+          {
+            "group": "CI/CD Integration",
+            "pages": [
+              "ci/overview",
+              "ci/jenkins",
+              "ci/circleci",
+              "ci/travis",
+              "ci/github-actions",
+              "ci/gitlab-ci"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/best-practices",
+              "advanced/environment-variables",
+              "advanced/plugins-development",
+              "advanced/troubleshooting"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Core API",
             "pages": [
-              "api-reference/introduction"
+              "api/fastlane",
+              "api/action",
+              "api/lane",
+              "api/fastfile"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Actions API",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/actions/all-actions"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }
