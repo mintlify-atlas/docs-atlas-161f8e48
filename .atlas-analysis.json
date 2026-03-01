@@ -1,0 +1,143 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "fastlane",
+  "projectDescription": "The easiest way to automate building and releasing iOS and Android apps",
+  "theme": "aspen",
+  "primaryColor": "#0066FF",
+  "lightColor": "#4D94FF",
+  "darkColor": "#003D99",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/fastfile",
+              "concepts/lanes",
+              "concepts/actions",
+              "concepts/plugins"
+            ]
+          },
+          {
+            "group": "Tools",
+            "pages": [
+              "tools/overview",
+              "tools/deliver",
+              "tools/supply",
+              "tools/gym",
+              "tools/scan",
+              "tools/match",
+              "tools/snapshot",
+              "tools/screengrab",
+              "tools/frameit",
+              "tools/pilot",
+              "tools/cert",
+              "tools/sigh",
+              "tools/pem",
+              "tools/produce",
+              "tools/precheck",
+              "tools/spaceship"
+            ]
+          },
+          {
+            "group": "Actions",
+            "pages": [
+              "actions/overview",
+              "actions/app-store",
+              "actions/testing",
+              "actions/building",
+              "actions/code-signing",
+              "actions/versioning",
+              "actions/project-management",
+              "actions/notifications"
+            ]
+          },
+          {
+            "group": "CI/CD Integration",
+            "pages": [
+              "ci/overview",
+              "ci/jenkins",
+              "ci/circleci",
+              "ci/travis",
+              "ci/github-actions",
+              "ci/gitlab-ci"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/best-practices",
+              "advanced/environment-variables",
+              "advanced/plugins-development",
+              "advanced/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core API",
+            "pages": [
+              "api/fastlane",
+              "api/action",
+              "api/lane",
+              "api/fastfile"
+            ]
+          },
+          {
+            "group": "Actions API",
+            "pages": [
+              "api/actions/all-actions"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Automated iOS and Android app deployment",
+    "Screenshot generation and framing",
+    "Code signing management with match",
+    "App Store Connect and Google Play integration",
+    "Extensible plugin system",
+    "CI/CD integration support",
+    "Lane-based workflow automation",
+    "Built-in testing and building tools"
+  ],
+  "publicApiSurface": [
+    "fastlane [lane_name]",
+    "fastlane init",
+    "fastlane actions",
+    "fastlane action [action_name]",
+    "fastlane lanes",
+    "fastlane list",
+    "fastlane new_action",
+    "fastlane deliver",
+    "fastlane supply",
+    "fastlane gym",
+    "fastlane scan",
+    "fastlane match",
+    "fastlane snapshot",
+    "fastlane screengrab",
+    "fastlane frameit",
+    "fastlane pilot",
+    "fastlane cert",
+    "fastlane sigh",
+    "fastlane pem",
+    "fastlane produce",
+    "fastlane precheck",
+    "fastlane spaceauth"
+  ]
+}
